@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>StudyMind — Dashboard</title>
+<link rel="stylesheet" href="styles.css"/>
+<style>
+.hero{background:linear-gradient(135deg,var(--surface) 0%,var(--surface2) 100%);border:1px solid var(--border);border-radius:16px;padding:30px 36px;margin-bottom:26px;position:relative;overflow:hidden;}
+.hero::after{content:'◈';position:absolute;right:24px;top:50%;transform:translateY(-50%);font-size:7rem;color:var(--gold);opacity:.05;pointer-events:none;}
+.hero h2{font-family:var(--font-display);font-size:1.7rem;color:var(--cream);margin-bottom:4px;}
+.hero h2 em{color:var(--gold);font-style:italic;}
+.hero p{color:var(--muted);max-width:460px;font-size:.88rem;}
+.quick-actions{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;}
+.task-pill{display:flex;align-items:center;gap:11px;padding:13px 15px;background:var(--surface2);border-radius:var(--radius-sm);margin-bottom:7px;border:1px solid var(--border);transition:border-color .15s;}
+.task-pill:hover{border-color:var(--gold-dim);}
+.check-btn{width:20px;height:20px;border-radius:50%;border:2px solid var(--border);cursor:pointer;background:transparent;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.check-btn.done{background:var(--success);border-color:var(--success);}
+.check-btn.done::after{content:'✓';color:#fff;font-size:.68rem;font-weight:700;}
+.check-btn.distracted{background:rgba(192,80,58,.2);border-color:var(--danger);}
+.check-btn.distracted::after{content:'✕';color:var(--danger);font-size:.7rem;font-weight:700;}
+.tp-text{flex:1;font-size:.85rem;}
+.tp-text.done{text-decoration:line-through;color:var(--muted);}
+.tp-text.distracted{text-decoration:line-through;color:var(--danger);}
+.tp-badge{font-size:.72rem;color:var(--muted);}
+
+/* GRAPH */
+.graph-wrap{position:relative;width:100%;height:160px;margin-top:8px;}
+.bar-chart{display:flex;align-items:flex-end;gap:8px;height:140px;padding:0 4px;}
+.bar-col{display:flex;flex-direction:column;align-items:center;flex:1;gap:4px;}
+.bar{width:100%;border-radius:5px 5px 0 0;transition:height .6s cubic-bezier(.4,0,.2,1);min-height:3px;cursor:pointer;position:relative;}
+.bar:hover::after{content:attr(data-label);position:absolute;top:-22px;left:50%;transform:translateX(-50%);background:var(--surface3);border:1px solid var(--border);border-radius:4px;padding:2px 7px;font-size:.7rem;white-space:nowrap;color:var(--text);}
+.bar-label{font-size:.7rem;color:var(--muted);font-family:var(--font-mono);}
+.bar-today{background:linear-gradient(180deg,var(--gold),var(--gold-dim));}
+.bar-normal{background:linear-gradient(180deg,rgba(212,168,67,.45),rgba(212,168,67,.15));}
+
+/* Countdown */
+.countdown-box{background:var(--surface2);border:1px solid var(--gold-dim);border-radius:var(--radius-sm);padding:14px 18px;margin-bottom:13px;}
+.countdown-box h4{font-size:.76rem;text-transform:uppercase;letter-spacing:.08em;color:var(--gold);margin-bottom:3px;}
+.countdown-val{font-family:var(--font-display);font-size:1.7rem;color:var(--cream);}
+.countdown-label{font-size:.78rem;color:var(--muted);}
+
+.subject-bar{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
+.subject-bar:last-child{border-bottom:none;}
+.subject-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.subject-name{flex:1;font-size:.87rem;color:var(--text);}
+.subject-pct{font-size:.78rem;color:var(--muted);font-family:var(--font-mono);min-width:32px;text-align:right;}
+
+.motivational{background:var(--surface2);border-left:3px solid var(--gold);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:13px 16px;font-size:.87rem;color:var(--text);font-style:italic;font-family:var(--font-display);}
+.motivational cite{display:block;font-size:.76rem;color:var(--muted);margin-top:5px;font-style:normal;font-family:var(--font-body);}
+
+/* Distracted warning */
+.distracted-alert{background:rgba(192,80,58,.08);border:1px solid rgba(192,80,58,.3);border-radius:var(--radius-sm);padding:10px 14px;font-size:.82rem;color:var(--danger);margin-bottom:14px;display:none;}
+
+/* ── Study Plan Preview (from Planner) ── */
+.plan-preview{margin-top:22px;}
+.plan-grid-wrap{overflow-x:auto;border-radius:0 0 var(--radius-sm) var(--radius-sm);}
+.plan-grid-inner{display:grid;min-width:560px;}
+.plan-day-hdr{text-align:center;padding:5px 3px;font-size:.62rem;letter-spacing:1.5px;color:var(--muted);border-bottom:1px solid var(--border);border-right:1px solid var(--border);background:var(--surface2);}
+.plan-day-hdr.today{color:var(--gold);border-bottom:2px solid var(--gold);}
+.plan-time-cell{font-size:.6rem;color:var(--muted);padding:0 5px;text-align:right;border-right:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--surface2);height:42px;display:flex;align-items:flex-start;justify-content:flex-end;padding-top:4px;}
+.plan-slot{border-right:1px solid var(--border);border-bottom:1px solid var(--border);height:42px;padding:2px;}
+.plan-block{height:100%;border-radius:3px;padding:2px 4px;font-size:.58rem;display:flex;flex-direction:column;justify-content:center;overflow:hidden;}
+.plan-block .psub{font-weight:700;font-size:.6rem;white-space:nowrap;overflow:hidden;}
+.plan-block .ptopic{font-size:.55rem;opacity:.8;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.plan-block.prev{background:#2e0a0a;border-left:2px solid #ef4444;color:#fca5a5;}
+.plan-block.prest{background:var(--surface);border-left:2px solid var(--border);color:var(--muted);}
+.plan-no-plan{padding:24px;text-align:center;font-size:.83rem;color:var(--muted);}
+.plan-no-plan a{color:var(--gold);}
+.plan-legend{display:flex;gap:12px;flex-wrap:wrap;padding:8px 0 2px;}
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="index.html" class="nav-brand">Study<em>Mind</em></a>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">🏠 <span>Dashboard</span></a>
+    <a href="planner.html" class="nav-link">📅 <span>Planner</span></a>
+    <a href="tasks.html" class="nav-link">✅ <span>Tasks</span></a>
+    <a href="subjects.html" class="nav-link">📚 <span>Subjects</span></a>
+    <a href="pomodoro.html" class="nav-link">🍅 <span>Pomodoro</span></a>
+    <a href="notes.html" class="nav-link">📝 <span>Notes</span></a>
+    <a href="ai-assistant.html" class="nav-link">🤖 <span>AI Advisor</span></a>
+    <a href="focus-detector.html" class="nav-link">👁 <span>Focus Detector</span></a>
+    <a href="admin.html" class="nav-link" id="admin-nav-link" style="display:none;">🛡 <span>Admin</span></a>
+  </div>
+  <div class="nav-right">
+    <div class="nav-time" id="clock">--:--</div>
+    <div class="user-chip">
+      <div class="user-avatar">?</div>
+      <span class="user-name">Student</span>
+      <div class="user-dropdown">
+        <a href="index.html">🏠 Dashboard</a>
+        <hr/>
+        <button onclick="switchAccount()">🔄 Switch Account</button>
+        <button class="logout-btn" onclick="logout()">🚪 Log Out</button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="container">
+    <div class="hero">
+      <h2>Good <em id="greeting">Day</em>, <span id="hero-name">Scholar</span> 👋</h2>
+      <p>Here's your study overview for today. Stay consistent — every session compounds into mastery.</p>
+      <div class="quick-actions">
+        <a href="pomodoro.html" class="btn btn-primary">🍅 Start Pomodoro</a>
+        <a href="tasks.html" class="btn btn-ghost">✅ Add Task</a>
+        <a href="planner.html" class="btn btn-ghost">📅 Schedule</a>
+        <a href="ai-assistant.html" class="btn btn-ghost">🤖 AI Advisor</a>
+      </div>
+    </div>
+
+    <!-- Distracted alert -->
+    <div class="distracted-alert" id="distracted-alert">
+      ⚠️ <strong id="distracted-count">0</strong> tasks were automatically marked as distracted because they were not completed by their due date.
+    </div>
+
+    <!-- Stats -->
+    <div class="grid-4" style="margin-bottom:24px;" id="stats-grid"></div>
+
+    <!-- Main grid -->
+    <div class="grid-2">
+
+      <!-- Left: Progress Graph + Tasks -->
+      <div style="display:flex;flex-direction:column;gap:18px;">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">7-Day Study Progress</div>
+            <span style="font-size:.76rem;color:var(--muted);" id="week-total-label">0h this week</span>
+          </div>
+          <div class="bar-chart" id="bar-chart"></div>
+          <div style="display:flex;justify-content:space-between;margin-top:4px;" id="bar-labels"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Today's Tasks</div>
+            <a href="tasks.html" class="btn btn-ghost btn-sm">View All</a>
+          </div>
+          <div id="today-tasks"></div>
+        </div>
+      </div>
+
+      <!-- Right -->
+      <div style="display:flex;flex-direction:column;gap:18px;">
+        <!-- Deadline -->
+        <div class="card">
+          <div class="card-header" style="margin-bottom:10px;">
+            <div class="card-title">Project Deadline</div>
+            <span class="badge badge-red">Urgent</span>
+          </div>
+          <div class="countdown-box">
+            <h4>Mini Project — AI Development</h4>
+            <div class="countdown-val" id="days-left">—</div>
+            <div class="countdown-label">days remaining · Due 24 April 2026</div>
+          </div>
+          <div class="progress-bar" style="margin-bottom:6px;">
+            <div class="progress-fill" id="project-progress" style="width:0%"></div>
+          </div>
+          <p style="font-size:.76rem;color:var(--muted);" id="project-progress-text"></p>
+        </div>
+
+        <!-- Subject Progress -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Subject Progress</div>
+            <a href="subjects.html" class="btn btn-ghost btn-sm">Manage</a>
+          </div>
+          <div id="subject-list"></div>
+        </div>
+
+        <!-- Pomodoro Stats -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Focus Stats</div>
+            <a href="pomodoro.html" class="btn btn-primary btn-sm">🍅 Start</a>
+          </div>
+          <div id="focus-stats" class="grid-2" style="gap:10px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:22px;">
+      <div class="motivational" id="quote-box"></div>
+    </div>
+
+    <!-- Study Plan from Planner -->
+    <div style="margin-top:22px;">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">📅 Your Weekly Study Plan</div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <span style="font-size:.72rem;color:var(--muted);" id="plan-generated-at"></span>
+            <a href="planner.html" class="btn btn-primary btn-sm">✏️ Edit Plan</a>
+          </div>
+        </div>
+        <div id="plan-display-area"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="app.js"></script>
+<script src="firebase-integration.js"></script>
+<script>
+const user=requireAuth();
+startClock(document.getElementById('clock'));
+renderUserChip();
+document.getElementById('hero-name').textContent=user.name.split(' ')[0];
+const hr=new Date().getHours();
+document.getElementById('greeting').textContent=hr<12?'Morning':hr<17?'Afternoon':'Evening';
+
+// Countdown
+(()=>{
+  const dead=new Date('2026-04-24T23:59:59'),start=new Date('2026-03-01'),now=new Date();
+  const diff=Math.max(0,Math.ceil((dead-now)/86400000));
+  document.getElementById('days-left').textContent=diff;
+  const total=(dead-start)/86400000;
+  const el=Math.min(100,((now-start)/86400000)/total*100);
+  document.getElementById('project-progress').style.width=el.toFixed(1)+'%';
+  document.getElementById('project-progress-text').textContent=`${el.toFixed(0)}% of project timeline elapsed`;
+})();
+
+// Stats
+function renderStats(){
+  const s=getStats();
+  const pct=s.total?Math.round(s.done/s.total*100):0;
+  document.getElementById('stats-grid').innerHTML=`
+    <div class="stat-card"><div class="stat-label">Completed Today</div><div class="stat-value">${s.todayDone}<span style="font-size:.95rem;color:var(--muted)">/${s.todayTasks}</span></div><div class="stat-sub">tasks done</div></div>
+    <div class="stat-card"><div class="stat-label">Total Done</div><div class="stat-value" style="color:var(--success)">${s.done}</div><div class="stat-sub">${pct}% rate</div></div>
+    <div class="stat-card"><div class="stat-label">Distracted</div><div class="stat-value" style="color:var(--danger)">${s.distracted}</div><div class="stat-sub">overdue tasks</div></div>
+    <div class="stat-card"><div class="stat-label">Study Time</div><div class="stat-value">${Math.floor(s.studyMins/60)}<span style="font-size:.95rem;color:var(--muted)">h</span></div><div class="stat-sub">${s.studyMins%60}m total</div></div>
+  `;
+  // Distracted alert
+  if(s.distracted>0){
+    const al=document.getElementById('distracted-alert');
+    document.getElementById('distracted-count').textContent=s.distracted;
+    al.style.display='block';
+  }
+  // Focus stats
+  document.getElementById('focus-stats').innerHTML=`
+    <div class="stat-card" style="padding:12px;"><div class="stat-label">Pomodoros</div><div class="stat-value">${s.pomodoroSessions}</div><div class="stat-sub">sessions done</div></div>
+    <div class="stat-card" style="padding:12px;"><div class="stat-label">Focus Time</div><div class="stat-value">${Math.floor(s.studyMins/60)}<span style="font-size:.9rem;color:var(--muted)">h</span></div><div class="stat-sub">total logged</div></div>
+  `;
+}
+renderStats();
+
+// Bar chart
+function renderGraph(){
+  const data=getWeeklyProgress();
+  const maxMins=Math.max(...data.map(d=>d.mins),1);
+  const todayStr=today();
+  const totalMins=data.reduce((a,d)=>a+d.mins,0);
+  document.getElementById('week-total-label').textContent=`${Math.floor(totalMins/60)}h ${totalMins%60}m this week`;
+  const chart=document.getElementById('bar-chart');
+  const labs=document.getElementById('bar-labels');
+  chart.innerHTML=data.map(d=>{
+    const h=Math.round((d.mins/maxMins)*120)||3;
+    const isToday=d.date===todayStr;
+    const label=`${Math.floor(d.mins/60)}h ${d.mins%60}m`;
+    return `<div class="bar-col">
+      <div class="bar ${isToday?'bar-today':'bar-normal'}" style="height:${h}px;" data-label="${label}"></div>
+    </div>`;
+  }).join('');
+  labs.innerHTML=data.map(d=>`<span style="flex:1;text-align:center;font-size:.69rem;color:${d.date===todayStr?'var(--gold)':'var(--muted)'};">${d.label}</span>`).join('');
+}
+renderGraph();
+
+// Today tasks
+function renderTodayTasks(){
+  const tasks=(Store.get('sm_tasks')||[]).filter(t=>t.date===today());
+  const el=document.getElementById('today-tasks');
+  if(!tasks.length){el.innerHTML=`<div class="empty-state" style="padding:20px"><p>No tasks for today. <a href="tasks.html" style="color:var(--gold)">Add one →</a></p></div>`;return;}
+  el.innerHTML=tasks.slice(0,6).map(t=>`
+    <div class="task-pill">
+      <button class="check-btn ${t.distracted?'distracted':t.done?'done':''}" onclick="toggleTask('${t.id}')"></button>
+      <div class="tp-text ${t.distracted?'distracted':t.done?'done':''}">${t.title}</div>
+      <div class="tp-badge">${t.subject||''}</div>
+    </div>
+  `).join('');
+}
+renderTodayTasks();
+
+function toggleTask(id){
+  const tasks=Store.get('sm_tasks')||[];
+  const t=tasks.find(x=>x.id===id);
+  if(t&&!t.distracted){t.done=!t.done;Store.set('sm_tasks',tasks);renderTodayTasks();renderStats();}
+}
+
+// Subjects
+function renderSubjects(){
+  const subs=Store.get('sm_subjects')||[];
+  const el=document.getElementById('subject-list');
+  if(!subs.length){el.innerHTML=`<div class="empty-state" style="padding:14px"><p>No subjects. <a href="subjects.html" style="color:var(--gold)">Add subjects →</a></p></div>`;return;}
+  const COLORS=['#d4a843','#5a9e6a','#4a7fb5','#c07842','#9a6ab5','#c05a6a'];
+  el.innerHTML=subs.map((s,i)=>`
+    <div class="subject-bar">
+      <div class="subject-dot" style="background:${COLORS[i%COLORS.length]}"></div>
+      <div class="subject-name">${s.name}</div>
+      <div class="progress-bar" style="flex:2"><div class="progress-fill" style="width:${s.progress||0}%"></div></div>
+      <div class="subject-pct">${s.progress||0}%</div>
+    </div>
+  `).join('');
+}
+renderSubjects();
+
+// Quote
+const quotes=[
+  {q:"The secret of getting ahead is getting started.",a:"Mark Twain"},
+  {q:"An investment in knowledge pays the best interest.",a:"Benjamin Franklin"},
+  {q:"Live as if you were to die tomorrow. Learn as if you were to live forever.",a:"Mahatma Gandhi"},
+  {q:"It does not matter how slowly you go as long as you do not stop.",a:"Confucius"},
+  {q:"The more that you read, the more things you will know.",a:"Dr. Seuss"},
+];
+const q=quotes[new Date().getDate()%quotes.length];
+document.getElementById('quote-box').innerHTML=`"${q.q}" <cite>— ${q.a}</cite>`;
+
+// ── Study Plan Preview from Planner ──────────────────────────────────────────
+(function renderStudyPlan(){
+  const KEY_PLAN='sm_planner_plan';
+  const saved=JSON.parse(localStorage.getItem(KEY_PLAN)||'null');
+  const area=document.getElementById('plan-display-area');
+  const atEl=document.getElementById('plan-generated-at');
+  if(!saved||!saved.subjectsMeta||!saved.subjectsMeta.length){
+    area.innerHTML=`<div class="plan-no-plan">
+      No plan yet. <a href="planner.html">Go to the Planner →</a> to add your subjects and generate a weekly schedule.
+    </div>`;
+    return;
+  }
+
+  // Timestamp
+  if(saved.generatedAt){
+    const d=new Date(saved.generatedAt);
+    atEl.textContent='Generated '+d.toLocaleDateString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+  }
+
+  const subjects=saved.subjectsMeta;
+  const TIMES=['08:00','09:00','10:00','11:00','12:00','13:00'];
+  const DAYS=['MON','TUE','WED','THU','FRI','SAT','SUN'];
+  const BREAK_IDX=2;
+
+  function shuffle(arr){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+  const activeList=subjects.filter(s=>s.active);
+  if(!activeList.length){
+    area.innerHTML=`<div class="plan-no-plan">All subjects were excluded. <a href="planner.html">Edit your plan →</a></div>`;
+    return;
+  }
+
+  // Seed random with generatedAt so the grid is stable across reloads
+  let seed=new Date(saved.generatedAt||Date.now()).getTime();
+  function seededRand(){seed=(seed*9301+49297)%233280;return seed/233280;}
+  function seededShuffle(arr){
+    const a=[...arr];
+    for(let i=a.length-1;i>0;i--){const j=Math.floor(seededRand()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+    return a;
+  }
+
+  const plan=[];
+  for(let d=0;d<7;d++){
+    const rota=seededShuffle(activeList);
+    const dayPlan=[];let si=0;
+    for(let t=0;t<TIMES.length;t++){
+      if(t===BREAK_IDX){dayPlan.push({type:'prest',sub:'BREAK',topic:''});continue;}
+      if(t===TIMES.length-1){
+        const s=rota[si%rota.length];
+        dayPlan.push({type:'prev',sub:'REVIEW',topic:s.short+' wrap-up'});si++;continue;
+      }
+      const s=rota[si%rota.length];si++;
+      const topicIdx=(d+t)%s.topics.length;
+      dayPlan.push({type:'dyn',sub:s.short,topic:s.topics[topicIdx],color:s.color,bg:s.bg,text:s.text});
+    }
+    plan.push(dayPlan);
+  }
+
+  const todayDow=(new Date().getDay()+6)%7;
+
+  // Legend
+  let legendHTML='<div class="plan-legend">';
+  activeList.forEach(s=>{
+    legendHTML+=`<span style="display:flex;align-items:center;gap:5px;font-size:.7rem;color:var(--muted);">
+      <span style="width:8px;height:8px;border-radius:2px;background:${s.color};display:inline-block;"></span>${s.name}
+    </span>`;
+  });
+  legendHTML+=`<span style="display:flex;align-items:center;gap:5px;font-size:.7rem;color:var(--muted);">
+    <span style="width:8px;height:8px;border-radius:2px;background:#ef4444;display:inline-block;"></span>Review
+  </span>`;
+  legendHTML+='</div>';
+
+  // Grid
+  const inner=document.createElement('div');
+  inner.className='plan-grid-inner';
+  inner.style.gridTemplateColumns='50px repeat(7,1fr)';
+
+  const corner=document.createElement('div');
+  corner.className='plan-day-hdr';
+  corner.style.cssText='background:var(--surface2);font-size:.58rem;';
+  corner.textContent='TIME';
+  inner.appendChild(corner);
+
+  DAYS.forEach((d,i)=>{
+    const dh=document.createElement('div');
+    dh.className='plan-day-hdr'+(i===todayDow?' today':'');
+    dh.textContent=d;
+    inner.appendChild(dh);
+  });
+
+  TIMES.forEach((t,ti)=>{
+    const tc=document.createElement('div');
+    tc.className='plan-time-cell';tc.textContent=t;
+    inner.appendChild(tc);
+    plan.forEach(day=>{
+      const slot=document.createElement('div');
+      slot.className='plan-slot';
+      const b=day[ti];
+      if(b){
+        const blk=document.createElement('div');
+        blk.className='plan-block '+b.type;
+        if(b.type==='dyn') blk.style.cssText=`background:${b.bg};border-left:2px solid ${b.color};color:${b.text};`;
+        blk.innerHTML=`<div class="psub">${b.sub}</div>${b.topic?`<div class="ptopic">${b.topic}</div>`:''}`;
+        slot.appendChild(blk);
+      }
+      inner.appendChild(slot);
+    });
+  });
+
+  area.innerHTML=legendHTML+'<div class="plan-grid-wrap"></div>';
+  area.querySelector('.plan-grid-wrap').appendChild(inner);
+})();
+</script>
+<script>
+(function(){const u=typeof getUser==='function'?getUser():null;if(u&&u.isAdmin){const el=document.getElementById('admin-nav-link');if(el)el.style.display='flex';}})();
+</script>
+</body>
+</html>

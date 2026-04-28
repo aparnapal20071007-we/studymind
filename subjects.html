@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>StudyMind — Subjects</title>
+<link rel="stylesheet" href="styles.css"/>
+<style>
+.subject-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px;position:relative;overflow:hidden;transition:all .2s;}
+.subject-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent-color,var(--gold));}
+.subject-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-gold);border-color:var(--gold-dim);}
+.sub-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.35rem;margin-bottom:12px;background:rgba(255,255,255,.04);}
+.sub-name{font-family:var(--font-display);font-size:1.15rem;color:var(--cream);margin-bottom:3px;}
+.sub-goal{font-size:.79rem;color:var(--muted);margin-bottom:12px;}
+.sub-meta-row{display:flex;gap:14px;margin-bottom:12px;flex-wrap:wrap;}
+.sub-meta-item{font-size:.79rem;color:var(--muted);}
+.sub-meta-item strong{color:var(--text);display:block;font-size:.98rem;font-family:var(--font-display);}
+.prog-label{display:flex;justify-content:space-between;font-size:.76rem;color:var(--muted);margin-bottom:5px;}
+.prog-input{display:flex;align-items:center;gap:8px;margin-top:10px;}
+.prog-input input[type=range]{flex:1;accent-color:var(--gold);padding:0;height:4px;}
+.sub-actions{display:flex;gap:7px;margin-top:14px;border-top:1px solid var(--border);padding-top:12px;}
+.add-form{background:var(--surface);border:1px dashed var(--gold-dim);border-radius:var(--radius);padding:24px;margin-bottom:24px;}
+.add-form h3{font-family:var(--font-display);font-size:1rem;color:var(--cream);margin-bottom:18px;}
+.emoji-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:6px;}
+.emoji-opt{font-size:1.25rem;padding:4px 7px;border-radius:6px;border:2px solid transparent;cursor:pointer;transition:all .15s;background:var(--surface2);}
+.emoji-opt:hover,.emoji-opt.selected{border-color:var(--gold);background:rgba(212,168,67,.08);}
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="index.html" class="nav-brand">Study<em>Mind</em></a>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">🏠 <span>Dashboard</span></a>
+    <a href="planner.html" class="nav-link">📅 <span>Planner</span></a>
+    <a href="tasks.html" class="nav-link">✅ <span>Tasks</span></a>
+    <a href="subjects.html" class="nav-link active">📚 <span>Subjects</span></a>
+    <a href="pomodoro.html" class="nav-link">🍅 <span>Pomodoro</span></a>
+    <a href="notes.html" class="nav-link">📝 <span>Notes</span></a>
+    <a href="ai-assistant.html" class="nav-link">🤖 <span>AI Advisor</span></a>
+    <a href="focus-detector.html" class="nav-link">👁 <span>Focus Detector</span></a>
+    <a href="admin.html" class="nav-link" id="admin-nav-link" style="display:none;">🛡 <span>Admin</span></a>
+  </div>
+  <div class="nav-right">
+    <div class="nav-time" id="clock">--:--</div>
+    <div class="user-chip">
+      <div class="user-avatar">?</div><span class="user-name">Student</span>
+      <div class="user-dropdown">
+        <button onclick="switchAccount()">🔄 Switch Account</button>
+        <button class="logout-btn" onclick="logout()">🚪 Log Out</button>
+      </div>
+    </div>
+  </div>
+</nav>
+<div class="page">
+  <div class="container">
+    <div class="page-header"><h1>My <em>Subjects</em></h1><div class="divider"></div><p>Track progress, set goals, and monitor study time per subject.</p></div>
+    <div class="add-form">
+      <h3>+ Add New Subject</h3>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div class="emoji-row" id="emoji-row">📚 📐 💻 🔬 🧮 🌍 📝 🎨 🏛️ ⚙️ 🧬 📊 🎵 🧪 📖</div>
+        <input type="hidden" id="sub-emoji" value="📚"/>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;">
+          <div class="input-group" style="flex:2;min-width:160px;"><label>Subject Name</label><input type="text" id="sub-name" placeholder="e.g. Applied Mathematics"/></div>
+          <div class="input-group" style="flex:1;min-width:110px;"><label>Color</label>
+            <select id="sub-color"><option value="#d4a843">Gold</option><option value="#5a9e6a">Green</option><option value="#4a7fb5">Blue</option><option value="#c07842">Orange</option><option value="#9a6ab5">Purple</option><option value="#c05a6a">Rose</option><option value="#6ab5b5">Teal</option></select></div>
+          <div class="input-group" style="flex:1;min-width:110px;"><label>Weekly Goal (hrs)</label><input type="number" id="sub-goal" value="5" min="1" max="40"/></div>
+        </div>
+        <div class="input-group"><label>Notes / Exam Date</label><input type="text" id="sub-notes" placeholder="e.g. Final exam on May 10"/></div>
+        <button class="btn btn-primary" style="width:fit-content;" onclick="addSubject()">Add Subject</button>
+      </div>
+    </div>
+    <div class="grid-3" id="subjects-grid"></div>
+  </div>
+</div>
+<div id="toast-container"></div>
+<script src="app.js"></script>
+<script src="firebase-integration.js"></script>
+<script>
+requireAuth();startClock(document.getElementById('clock'));renderUserChip();
+const EMOJIS=['📚','📐','💻','🔬','🧮','🌍','📝','🎨','🏛️','⚙️','🧬','📊','🎵','🧪','📖'];
+const COLORS=['#d4a843','#5a9e6a','#4a7fb5','#c07842','#9a6ab5','#c05a6a','#6ab5b5'];
+let selectedEmoji='📚';
+const er=document.getElementById('emoji-row');
+er.innerHTML=EMOJIS.map(e=>`<span class="emoji-opt ${e==='📚'?'selected':''}" data-e="${e}" onclick="selEmoji('${e}')">${e}</span>`).join('');
+function selEmoji(e){selectedEmoji=e;document.getElementById('sub-emoji').value=e;document.querySelectorAll('.emoji-opt').forEach(el=>el.classList.toggle('selected',el.dataset.e===e));}
+function addSubject(){
+  const name=document.getElementById('sub-name').value.trim();
+  if(!name){showToast('Enter a subject name','error');return;}
+  const subs=Store.get('sm_subjects')||[];
+  if(subs.find(s=>s.name.toLowerCase()===name.toLowerCase())){showToast('Already exists','error');return;}
+  Store.push('sm_subjects',{id:uid(),name,emoji:selectedEmoji,color:document.getElementById('sub-color').value,goal:parseInt(document.getElementById('sub-goal').value)||5,notes:document.getElementById('sub-notes').value.trim(),progress:0,studyMins:0,created:new Date().toISOString()});
+  document.getElementById('sub-name').value='';document.getElementById('sub-notes').value='';
+  showToast(name+' added!','success');renderSubjects();
+}
+function updateProgress(id,val){
+  const subs=Store.get('sm_subjects')||[];const s=subs.find(x=>x.id===id);
+  if(s){s.progress=parseInt(val);Store.set('sm_subjects',subs);}
+  document.getElementById('pl-'+id).textContent=val+'%';
+  document.getElementById('pf-'+id).style.width=val+'%';
+}
+function deleteSubject(id){if(!confirm('Delete this subject?'))return;Store.set('sm_subjects',(Store.get('sm_subjects')||[]).filter(s=>s.id!==id));showToast('Removed','info');renderSubjects();}
+function renderSubjects(){
+  const subs=Store.get('sm_subjects')||[];
+  const sessions=Store.get('sm_sessions')||[];
+  const el=document.getElementById('subjects-grid');
+  if(!subs.length){el.innerHTML=`<div class="empty-state" style="grid-column:1/-1;padding:44px"><p>No subjects yet. Add your first one above!</p></div>`;return;}
+  el.innerHTML=subs.map(s=>{
+    const sm=sessions.filter(x=>x.subject===s.name);
+    const mins=sm.reduce((a,x)=>a+(x.minutes||0),0);
+    const hrs=(mins/60).toFixed(1);
+    const gp=Math.min(100,Math.round(hrs/s.goal*100));
+    return `<div class="subject-card" style="--accent-color:${s.color}">
+      <div class="sub-icon">${s.emoji}</div>
+      <div class="sub-name">${s.name}</div>
+      <div class="sub-goal">${s.notes||'Goal: '+s.goal+'h / week'}</div>
+      <div class="sub-meta-row">
+        <div class="sub-meta-item"><strong>${hrs}h</strong>studied</div>
+        <div class="sub-meta-item"><strong>${sm.length}</strong>sessions</div>
+        <div class="sub-meta-item"><strong>${gp}%</strong>weekly goal</div>
+      </div>
+      <div class="prog-label"><span>Completion</span><span id="pl-${s.id}">${s.progress||0}%</span></div>
+      <div class="progress-bar"><div class="progress-fill" id="pf-${s.id}" style="width:${s.progress||0}%;background:${s.color};"></div></div>
+      <div class="prog-input"><span style="font-size:.73rem;color:var(--muted);">Update:</span>
+        <input type="range" min="0" max="100" value="${s.progress||0}" oninput="updateProgress('${s.id}',this.value)" onchange="updateProgress('${s.id}',this.value)" style="accent-color:${s.color}"/>
+      </div>
+      <div class="sub-actions">
+        <a href="planner.html" class="btn btn-ghost btn-sm">+ Session</a>
+        <a href="tasks.html" class="btn btn-ghost btn-sm">+ Task</a>
+        <button class="btn btn-danger btn-sm" style="margin-left:auto;" onclick="deleteSubject('${s.id}')">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+renderSubjects();
+</script>
+<script>
+(function(){const u=typeof getUser==='function'?getUser():null;if(u&&u.isAdmin){const el=document.getElementById('admin-nav-link');if(el)el.style.display='flex';}})();
+</script>
+</body>
+</html>

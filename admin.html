@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>StudyMind — Admin Panel</title>
+<link rel="stylesheet" href="styles.css"/>
+<style>
+.admin-header-banner{
+  background:linear-gradient(135deg,rgba(57,255,20,.06),rgba(57,255,20,.02));
+  border:1px solid rgba(57,255,20,.2);border-radius:var(--radius);
+  padding:20px 28px;margin-bottom:26px;display:flex;align-items:center;gap:14px;
+}
+.admin-badge{
+  background:var(--gold);color:#090d09;font-size:.7rem;font-weight:800;
+  padding:3px 10px;border-radius:100px;letter-spacing:.08em;text-transform:uppercase;
+  box-shadow:0 0 12px rgba(57,255,20,.4);
+}
+.admin-tabs{display:flex;gap:4px;background:var(--surface2);border-radius:var(--radius-sm);padding:3px;margin-bottom:26px;width:fit-content;flex-wrap:wrap;}
+.atab{padding:7px 18px;border-radius:6px;border:none;font-family:var(--font-body);font-size:.82rem;color:var(--muted);background:transparent;transition:all .18s;}
+.atab.active{background:var(--gold);color:#090d09;font-weight:700;}
+.atab:hover:not(.active){color:var(--text);background:var(--surface3);}
+
+/* User table */
+.data-table{width:100%;border-collapse:collapse;font-size:.84rem;}
+.data-table th{text-align:left;padding:10px 14px;background:var(--surface2);color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border);}
+.data-table td{padding:11px 14px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle;}
+.data-table tr:hover td{background:rgba(57,255,20,.02);}
+.data-table tr:last-child td{border-bottom:none;}
+
+.user-row-av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--gold-dim),var(--gold));display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;color:#090d09;flex-shrink:0;}
+
+/* Stat cards row */
+.admin-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:13px;margin-bottom:26px;}
+@media(max-width:900px){.admin-stats{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:600px){.admin-stats{grid-template-columns:repeat(2,1fr);}}
+
+/* Charts */
+.mini-bar-wrap{display:flex;align-items:flex-end;gap:5px;height:60px;padding-top:6px;}
+.mini-bar{flex:1;border-radius:3px 3px 0 0;background:linear-gradient(180deg,var(--gold),var(--gold-dim));min-height:3px;position:relative;}
+.mini-bar:hover::after{content:attr(title);position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);background:var(--surface3);border:1px solid var(--border);border-radius:4px;padding:2px 7px;font-size:.68rem;white-space:nowrap;color:var(--text);pointer-events:none;}
+
+/* Log entries */
+.log-entry{display:flex;align-items:flex-start;gap:12px;padding:10px 14px;border-bottom:1px solid var(--border);font-size:.82rem;}
+.log-entry:last-child{border-bottom:none;}
+.log-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:5px;}
+.log-time{color:var(--muted);font-size:.73rem;font-family:var(--font-mono);min-width:100px;}
+.log-msg{flex:1;}
+.log-info .log-dot{background:var(--info);}
+.log-success .log-dot{background:var(--gold);}
+.log-warn .log-dot{background:var(--warn);}
+.log-danger .log-dot{background:var(--danger);}
+
+/* Tab panels */
+.tab-panel{display:none;}.tab-panel.active{display:block;}
+
+/* Edit user modal inputs */
+.admin-toggle{display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);}
+.toggle-sw{width:36px;height:20px;background:var(--surface3);border-radius:100px;position:relative;border:1px solid var(--border);transition:background .2s;flex-shrink:0;}
+.toggle-sw.on{background:var(--gold);border-color:var(--gold);}
+.toggle-sw::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .2s;}
+.toggle-sw.on::after{transform:translateX(16px);}
+
+/* System settings */
+.setting-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);}
+.setting-row:last-child{border-bottom:none;}
+.setting-info h4{font-size:.88rem;color:var(--text);margin-bottom:2px;}
+.setting-info p{font-size:.77rem;color:var(--muted);}
+
+.danger-zone{background:rgba(192,80,58,.05);border:1px solid rgba(192,80,58,.2);border-radius:var(--radius);padding:20px;}
+.danger-zone h3{font-family:var(--font-display);color:var(--danger);font-size:1rem;margin-bottom:14px;}
+
+.announce-form{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:18px;margin-bottom:16px;}
+.announce-item{padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:7px;display:flex;align-items:flex-start;gap:12px;}
+.announce-badge{font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:100px;text-transform:uppercase;}
+.ab-info{background:rgba(74,159,181,.15);color:var(--info);border:1px solid rgba(74,159,181,.3);}
+.ab-warn{background:rgba(192,168,66,.15);color:var(--warn);border:1px solid rgba(192,168,66,.3);}
+.ab-success{background:rgba(57,255,20,.1);color:var(--gold);border:1px solid rgba(57,255,20,.25);}
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="index.html" class="nav-brand">Study<em>Mind</em></a>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">🏠 <span>Dashboard</span></a>
+    <a href="planner.html" class="nav-link">📅 <span>Planner</span></a>
+    <a href="tasks.html" class="nav-link">✅ <span>Tasks</span></a>
+    <a href="subjects.html" class="nav-link">📚 <span>Subjects</span></a>
+    <a href="pomodoro.html" class="nav-link">🍅 <span>Pomodoro</span></a>
+    <a href="notes.html" class="nav-link">📝 <span>Notes</span></a>
+    <a href="ai-assistant.html" class="nav-link">🤖 <span>AI Advisor</span></a>
+    <a href="focus-detector.html" class="nav-link">👁 <span>Focus Detector</span></a>
+    <a href="admin.html" class="nav-link active">🛡 <span>Admin</span></a>
+  </div>
+  <div class="nav-right">
+    <div class="nav-time" id="clock">--:--</div>
+    <div class="user-chip">
+      <div class="user-avatar">?</div><span class="user-name">Admin</span>
+      <div class="user-dropdown">
+        <a href="index.html">🏠 Dashboard</a>
+        <hr/>
+        <button onclick="switchAccount()">🔄 Switch Account</button>
+        <button class="logout-btn" onclick="logout()">🚪 Log Out</button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="container" style="padding-top:24px;">
+
+    <div class="admin-header-banner">
+      <div style="font-size:2rem;">🛡</div>
+      <div style="flex:1;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+          <h1 style="font-family:var(--font-display);font-size:1.5rem;color:var(--cream);">Admin <em style="color:var(--gold);font-style:italic;">Panel</em></h1>
+          <span class="admin-badge">Admin Access</span>
+        </div>
+        <p style="font-size:.84rem;color:var(--muted);">Manage users, view system stats, announcements, and platform settings.</p>
+      </div>
+      <div id="admin-clock" style="font-family:var(--font-mono);font-size:.82rem;color:var(--muted);text-align:right;"></div>
+    </div>
+
+    <!-- Admin Stats -->
+    <div class="admin-stats" id="admin-stats"></div>
+
+    <!-- Tabs -->
+    <div class="admin-tabs">
+      <button class="atab active" onclick="switchTab('users')">👥 Users</button>
+      <button class="atab" onclick="switchTab('activity')">📊 Activity</button>
+      <button class="atab" onclick="switchTab('announcements')">📢 Announcements</button>
+      <button class="atab" onclick="switchTab('data')">🗄 Data</button>
+      <button class="atab" onclick="switchTab('settings')">⚙️ Settings</button>
+    </div>
+
+    <!-- USERS TAB -->
+    <div class="tab-panel active" id="tab-users">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Registered Users</div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="text" id="user-search" placeholder="Search users…" style="width:200px;padding:5px 10px;font-size:.8rem;" oninput="renderUsers()"/>
+            <button class="btn btn-primary btn-sm" onclick="openModal('add-user-modal')">+ Add User</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="data-table">
+            <thead><tr>
+              <th>User</th><th>Email</th><th>Level</th><th>Joined</th><th>Subjects</th><th>Tasks</th><th>Study Time</th><th>Role</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="users-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACTIVITY TAB -->
+    <div class="tab-panel" id="tab-activity">
+      <div class="grid-2" style="margin-bottom:18px;">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Study Sessions (Last 7 Days)</div></div>
+          <div id="activity-chart" class="mini-bar-wrap"></div>
+          <div style="display:flex;justify-content:space-between;margin-top:6px;" id="activity-labels"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Task Completion Rate</div></div>
+          <div id="completion-stats" style="display:flex;flex-direction:column;gap:10px;"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Activity Log</div>
+          <button class="btn btn-ghost btn-sm" onclick="clearLog()">Clear Log</button>
+        </div>
+        <div id="activity-log"></div>
+      </div>
+    </div>
+
+    <!-- ANNOUNCEMENTS TAB -->
+    <div class="tab-panel" id="tab-announcements">
+      <div class="card" style="margin-bottom:18px;">
+        <div class="card-header"><div class="card-title">Post Announcement</div></div>
+        <div class="announce-form">
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div class="input-group"><label>Title</label><input type="text" id="ann-title" placeholder="Announcement title…"/></div>
+            <div class="input-group"><label>Message</label><textarea id="ann-msg" rows="3" placeholder="Write your announcement…"></textarea></div>
+            <div class="form-row">
+              <div class="input-group"><label>Type</label>
+                <select id="ann-type"><option value="info">ℹ️ Info</option><option value="warn">⚠️ Warning</option><option value="success">✅ Success</option></select>
+              </div>
+              <div class="input-group"><label>Expires (days)</label><input type="number" id="ann-days" value="7" min="1" max="90"/></div>
+            </div>
+            <button class="btn btn-primary" style="width:fit-content;" onclick="postAnnouncement()">Post Announcement</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Active Announcements</div></div>
+        <div id="announcements-list"></div>
+      </div>
+    </div>
+
+    <!-- DATA TAB -->
+    <div class="tab-panel" id="tab-data">
+      <div class="grid-2" style="margin-bottom:18px;">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Export Data</div></div>
+          <p style="font-size:.84rem;color:var(--muted);margin-bottom:16px;">Download all platform data as JSON files for backup.</p>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <button class="btn btn-ghost" onclick="exportData('sm_accounts')">📥 Export All Users</button>
+            <button class="btn btn-ghost" onclick="exportData('sm_tasks')">📥 Export All Tasks</button>
+            <button class="btn btn-ghost" onclick="exportData('sm_sessions')">📥 Export Study Sessions</button>
+            <button class="btn btn-ghost" onclick="exportData('sm_subjects')">📥 Export Subjects</button>
+            <button class="btn btn-ghost" onclick="exportData('sm_notes')">📥 Export Notes</button>
+            <button class="btn btn-primary" onclick="exportAllData()">📦 Export Everything</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Storage Usage</div></div>
+          <div id="storage-stats" style="display:flex;flex-direction:column;gap:10px;"></div>
+        </div>
+      </div>
+      <div class="danger-zone">
+        <h3>⚠️ Danger Zone</h3>
+        <p style="font-size:.83rem;color:var(--muted);margin-bottom:16px;">These actions are irreversible. Proceed with extreme caution.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-danger" onclick="clearAllTasks()">🗑 Clear All Tasks</button>
+          <button class="btn btn-danger" onclick="clearAllSessions()">🗑 Clear Study Sessions</button>
+          <button class="btn btn-danger" onclick="resetUser()">🗑 Reset Current User Data</button>
+          <button class="btn" style="background:rgba(192,80,58,.15);color:var(--danger);border:1px solid var(--danger);" onclick="nukeAll()">💥 Nuke All Data</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS TAB -->
+    <div class="tab-panel" id="tab-settings">
+      <div class="card" style="margin-bottom:18px;">
+        <div class="card-header"><div class="card-title">Platform Settings</div></div>
+        <div id="platform-settings">
+          <div class="setting-row">
+            <div class="setting-info"><h4>Allow New Registrations</h4><p>Let new users create accounts on this device</p></div>
+            <div class="toggle-sw on" id="tog-register" onclick="toggleSetting('tog-register','sm_cfg_registration',true)"></div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info"><h4>Auto-Mark Overdue Tasks</h4><p>Automatically mark tasks as distracted when overdue</p></div>
+            <div class="toggle-sw on" id="tog-automark" onclick="toggleSetting('tog-automark','sm_cfg_automark',true)"></div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info"><h4>AI Advisor Enabled</h4><p>Allow users to access the Claude-powered AI advisor</p></div>
+            <div class="toggle-sw on" id="tog-ai" onclick="toggleSetting('tog-ai','sm_cfg_ai',true)"></div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info"><h4>Focus Detector Enabled</h4><p>Allow camera-based focus detection feature</p></div>
+            <div class="toggle-sw on" id="tog-focus" onclick="toggleSetting('tog-focus','sm_cfg_focus',true)"></div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info"><h4>Admin Panel Visible in Nav</h4><p>Show the Admin link in the navigation bar for admins</p></div>
+            <div class="toggle-sw on" id="tog-adminlink" onclick="toggleSetting('tog-adminlink','sm_cfg_adminlink',true)"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Admin Credentials</div></div>
+        <div style="display:flex;flex-direction:column;gap:13px;">
+          <div class="input-group"><label>Admin Password</label><input type="password" id="admin-pw-input" placeholder="Set admin password…"/></div>
+          <button class="btn btn-primary" style="width:fit-content;" onclick="saveAdminPw()">Update Password</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Add User Modal -->
+<div class="modal-overlay" id="add-user-modal" style="display:none;">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Add New User</div>
+      <button class="btn btn-ghost btn-icon btn-sm" onclick="closeModal('add-user-modal')">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:13px;">
+      <div class="input-group"><label>Full Name</label><input type="text" id="nu-name" placeholder="e.g. Arjun Sharma"/></div>
+      <div class="input-group"><label>Email</label><input type="email" id="nu-email" placeholder="user@example.com"/></div>
+      <div class="input-group"><label>Password</label><input type="password" id="nu-pw" placeholder="Min. 6 chars"/></div>
+      <div class="input-group"><label>Education Level</label>
+        <select id="nu-level"><option>School</option><option>College</option><option>Pre-Graduate</option><option>Post-Graduate</option></select>
+      </div>
+      <div class="admin-toggle">
+        <div style="flex:1;"><div style="font-size:.87rem;color:var(--text);">Grant Admin Access</div><div style="font-size:.76rem;color:var(--muted);">This user can access the admin panel</div></div>
+        <div class="toggle-sw" id="nu-admin-tog" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <button class="btn btn-primary" onclick="addUser()">Create User</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal-overlay" id="edit-user-modal" style="display:none;">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Edit User</div>
+      <button class="btn btn-ghost btn-icon btn-sm" onclick="closeModal('edit-user-modal')">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:13px;">
+      <div class="input-group"><label>Full Name</label><input type="text" id="eu-name"/></div>
+      <div class="input-group"><label>Email</label><input type="email" id="eu-email"/></div>
+      <div class="input-group"><label>New Password (leave blank to keep)</label><input type="password" id="eu-pw" placeholder="Leave blank to keep current"/></div>
+      <div class="input-group"><label>Education Level</label>
+        <select id="eu-level"><option>School</option><option>College</option><option>Pre-Graduate</option><option>Post-Graduate</option></select>
+      </div>
+      <div class="admin-toggle">
+        <div style="flex:1;"><div style="font-size:.87rem;color:var(--text);">Admin Access</div></div>
+        <div class="toggle-sw" id="eu-admin-tog" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <button class="btn btn-primary" onclick="saveUser()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="app.js"></script>
+<script src="firebase-integration.js"></script>
+<script>
+// Gate: require admin
+(function(){
+  const u=getUser();
+  if(!u){location.href='login.html';return;}
+  const pw=Store.get('sm_admin_pw')||'admin123';
+  if(!u.isAdmin){
+    const entered=prompt('🛡 Admin Password Required:');
+    if(entered!==pw){alert('Access denied.');location.href='index.html';return;}
+    u.isAdmin=true;Store.set('sm_user',u);
+  }
+})();
+
+startClock(document.getElementById('clock'));
+renderUserChip();
+
+// Live admin clock
+setInterval(()=>{
+  const el=document.getElementById('admin-clock');
+  if(el)el.textContent=new Date().toLocaleString('en-IN',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+},1000);
+
+// ── TAB SWITCH ──
+function switchTab(name){
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.atab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  event.target.classList.add('active');
+  if(name==='activity') renderActivity();
+  if(name==='data') renderStorageStats();
+  if(name==='settings') loadSettings();
+  if(name==='announcements') renderAnnouncements();
+}
+
+// ── ADMIN STATS ──
+function renderAdminStats(){
+  const accounts=Store.get('sm_accounts')||[];
+  const tasks=Store.get('sm_tasks')||[];
+  const sessions=Store.get('sm_sessions')||[];
+  const notes=Store.get('sm_notes')||[];
+  const subs=Store.get('sm_subjects')||[];
+  const totalMins=sessions.reduce((a,s)=>a+(s.minutes||0),0);
+  document.getElementById('admin-stats').innerHTML=`
+    <div class="stat-card"><div class="stat-label">Total Users</div><div class="stat-value" style="color:var(--gold)">${accounts.length}</div><div class="stat-sub">registered accounts</div></div>
+    <div class="stat-card"><div class="stat-label">Total Tasks</div><div class="stat-value">${tasks.length}</div><div class="stat-sub">${tasks.filter(t=>t.done&&!t.distracted).length} completed</div></div>
+    <div class="stat-card"><div class="stat-label">Study Sessions</div><div class="stat-value">${sessions.length}</div><div class="stat-sub">${Math.floor(totalMins/60)}h total</div></div>
+    <div class="stat-card"><div class="stat-label">Subjects</div><div class="stat-value">${subs.length}</div><div class="stat-sub">across all users</div></div>
+    <div class="stat-card"><div class="stat-label">Notes</div><div class="stat-value">${notes.length}</div><div class="stat-sub">saved notes</div></div>
+  `;
+}
+renderAdminStats();
+
+// ── USERS ──
+let editingUserId=null;
+function renderUsers(){
+  const q=(document.getElementById('user-search').value||'').toLowerCase();
+  const accounts=(Store.get('sm_accounts')||[]).filter(a=>!q||a.name.toLowerCase().includes(q)||a.email.toLowerCase().includes(q));
+  const sessions=Store.get('sm_sessions')||[];
+  const tasks=Store.get('sm_tasks')||[];
+  const subs=Store.get('sm_subjects')||[];
+  const tbody=document.getElementById('users-tbody');
+  if(!accounts.length){tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--muted);">No users found.</td></tr>`;return;}
+  tbody.innerHTML=accounts.map(a=>{
+    const userSessions=sessions.filter(s=>s.userId===a.id);
+    const userTasks=tasks.filter(t=>t.userId===a.id);
+    const userSubs=subs.filter(s=>s.userId===a.id);
+    const mins=userSessions.reduce((acc,s)=>acc+(s.minutes||0),0);
+    const joined=a.created?new Date(a.created).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):'—';
+    return `<tr>
+      <td><div style="display:flex;align-items:center;gap:9px;">
+        <div class="user-row-av">${a.name.charAt(0).toUpperCase()}</div>
+        <div><div style="font-size:.86rem;color:var(--cream);">${a.name}</div>${a.isAdmin?`<span style="font-size:.68rem;color:var(--gold);background:rgba(57,255,20,.08);padding:1px 6px;border-radius:100px;border:1px solid rgba(57,255,20,.2);">Admin</span>`:''}</div>
+      </div></td>
+      <td style="color:var(--muted);font-size:.8rem;">${a.email}</td>
+      <td><span class="badge badge-muted">${a.level||'—'}</span></td>
+      <td style="font-size:.78rem;color:var(--muted);">${joined}</td>
+      <td style="font-family:var(--font-mono);font-size:.82rem;">${userSubs.length||subs.length}</td>
+      <td style="font-family:var(--font-mono);font-size:.82rem;">${userTasks.length||tasks.length}</td>
+      <td style="font-family:var(--font-mono);font-size:.82rem;">${Math.floor(mins/60)}h ${mins%60}m</td>
+      <td><span class="badge ${a.isAdmin?'badge-gold':'badge-muted'}">${a.isAdmin?'Admin':'Student'}</span></td>
+      <td><div style="display:flex;gap:5px;">
+        <button class="btn btn-ghost btn-sm" onclick="openEditUser('${a.id}')">✏️</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteUser('${a.id}')">🗑</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+renderUsers();
+
+function addUser(){
+  const name=document.getElementById('nu-name').value.trim();
+  const email=document.getElementById('nu-email').value.trim();
+  const pw=document.getElementById('nu-pw').value;
+  const level=document.getElementById('nu-level').value;
+  const isAdmin=document.getElementById('nu-admin-tog').classList.contains('on');
+  if(!name||!email||pw.length<6){showToast('Fill all fields (min 6 char password)','error');return;}
+  const accounts=Store.get('sm_accounts')||[];
+  if(accounts.find(a=>a.email===email)){showToast('Email already registered','error');return;}
+  accounts.push({id:uid(),name,email,level,pw,isAdmin,created:new Date().toISOString()});
+  Store.set('sm_accounts',accounts);
+  closeModal('add-user-modal');showToast(name+' created!','success');
+  renderUsers();renderAdminStats();logAction('success',`Admin created user: ${name} (${email})`);
+}
+
+function openEditUser(id){
+  const a=(Store.get('sm_accounts')||[]).find(x=>x.id===id);if(!a)return;
+  editingUserId=id;
+  document.getElementById('eu-name').value=a.name;
+  document.getElementById('eu-email').value=a.email;
+  document.getElementById('eu-pw').value='';
+  document.getElementById('eu-level').value=a.level||'College';
+  const tog=document.getElementById('eu-admin-tog');
+  tog.classList.toggle('on',!!a.isAdmin);
+  openModal('edit-user-modal');
+}
+
+function saveUser(){
+  const accounts=Store.get('sm_accounts')||[];
+  const idx=accounts.findIndex(a=>a.id===editingUserId);if(idx<0)return;
+  const name=document.getElementById('eu-name').value.trim();
+  const email=document.getElementById('eu-email').value.trim();
+  const pw=document.getElementById('eu-pw').value;
+  const level=document.getElementById('eu-level').value;
+  const isAdmin=document.getElementById('eu-admin-tog').classList.contains('on');
+  if(!name||!email){showToast('Name and email required','error');return;}
+  accounts[idx]={...accounts[idx],name,email,level,isAdmin};
+  if(pw.length>=6) accounts[idx].pw=pw;
+  Store.set('sm_accounts',accounts);
+  closeModal('edit-user-modal');showToast('User updated','success');
+  renderUsers();logAction('info',`Admin edited user: ${name}`);
+}
+
+function deleteUser(id){
+  const a=(Store.get('sm_accounts')||[]).find(x=>x.id===id);
+  if(!confirm(`Delete user "${a?.name}"? This cannot be undone.`))return;
+  Store.set('sm_accounts',(Store.get('sm_accounts')||[]).filter(x=>x.id!==id));
+  showToast('User deleted','info');renderUsers();renderAdminStats();
+  logAction('danger',`Admin deleted user: ${a?.name} (${a?.email})`);
+}
+
+// ── ACTIVITY ──
+function renderActivity(){
+  // Bar chart
+  const sessions=Store.get('sm_sessions')||[];
+  const days=[];
+  for(let i=6;i>=0;i--){
+    const d=new Date();d.setDate(d.getDate()-i);
+    const ds=d.toISOString().split('T')[0];
+    const mins=sessions.filter(s=>s.date===ds).reduce((a,s)=>a+(s.minutes||0),0);
+    days.push({label:d.toLocaleDateString('en-IN',{weekday:'short'}),mins,date:ds});
+  }
+  const maxM=Math.max(...days.map(d=>d.mins),1);
+  const todayStr=today();
+  document.getElementById('activity-chart').innerHTML=days.map(d=>{
+    const h=Math.round((d.mins/maxM)*55)||3;
+    const isT=d.date===todayStr;
+    return `<div class="mini-bar" style="height:${h}px;${isT?'box-shadow:0 0 10px var(--gold);':''}" title="${d.label}: ${Math.floor(d.mins/60)}h ${d.mins%60}m"></div>`;
+  }).join('');
+  document.getElementById('activity-labels').innerHTML=days.map(d=>`<span style="flex:1;text-align:center;font-size:.68rem;color:${d.date===todayStr?'var(--gold)':'var(--muted)'};">${d.label}</span>`).join('');
+
+  // Completion stats
+  const tasks=Store.get('sm_tasks')||[];
+  const done=tasks.filter(t=>t.done&&!t.distracted).length;
+  const dist=tasks.filter(t=>t.distracted).length;
+  const pend=tasks.filter(t=>!t.done).length;
+  const total=tasks.length||1;
+  document.getElementById('completion-stats').innerHTML=`
+    ${bar('Completed',done,total,'var(--gold)')}
+    ${bar('Distracted',dist,total,'var(--danger)')}
+    ${bar('Pending',pend,total,'var(--muted)')}
+    <div style="font-size:.78rem;color:var(--muted);margin-top:4px;">Total tasks: <strong style="color:var(--text)">${tasks.length}</strong></div>
+  `;
+  renderLog();
+}
+function bar(label,val,total,color){
+  const pct=total?Math.round(val/total*100):0;
+  return `<div><div style="display:flex;justify-content:space-between;font-size:.78rem;color:var(--muted);margin-bottom:4px;"><span>${label}</span><span style="color:var(--text)">${val} (${pct}%)</span></div><div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${color};"></div></div></div>`;
+}
+
+// ── LOG ──
+function logAction(type,msg){
+  const logs=Store.get('sm_admin_log')||[];
+  logs.unshift({type,msg,time:new Date().toISOString()});
+  if(logs.length>100) logs.splice(100);
+  Store.set('sm_admin_log',logs);
+}
+function renderLog(){
+  const logs=Store.get('sm_admin_log')||[];
+  const el=document.getElementById('activity-log');
+  if(!logs.length){el.innerHTML=`<div class="log-entry"><span style="color:var(--muted);font-style:italic;font-size:.82rem;">No activity recorded yet.</span></div>`;return;}
+  el.innerHTML=logs.slice(0,30).map(l=>`
+    <div class="log-entry log-${l.type}">
+      <div class="log-dot"></div>
+      <div class="log-msg">${l.msg}</div>
+      <div class="log-time">${new Date(l.time).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</div>
+    </div>
+  `).join('');
+}
+function clearLog(){if(!confirm('Clear activity log?'))return;Store.set('sm_admin_log',[]);renderLog();showToast('Log cleared','info');}
+
+// ── ANNOUNCEMENTS ──
+function postAnnouncement(){
+  const title=document.getElementById('ann-title').value.trim();
+  const msg=document.getElementById('ann-msg').value.trim();
+  const type=document.getElementById('ann-type').value;
+  const days=parseInt(document.getElementById('ann-days').value)||7;
+  if(!title||!msg){showToast('Fill title and message','error');return;}
+  const expiry=new Date();expiry.setDate(expiry.getDate()+days);
+  const anns=Store.get('sm_announcements')||[];
+  anns.unshift({id:uid(),title,msg,type,expiry:expiry.toISOString(),created:new Date().toISOString()});
+  Store.set('sm_announcements',anns);
+  document.getElementById('ann-title').value='';document.getElementById('ann-msg').value='';
+  showToast('Announcement posted!','success');renderAnnouncements();
+  logAction('success',`Announcement posted: "${title}"`);
+}
+function renderAnnouncements(){
+  const anns=Store.get('sm_announcements')||[];
+  const el=document.getElementById('announcements-list');
+  if(!el)return;
+  if(!anns.length){el.innerHTML=`<div class="empty-state" style="padding:20px"><p>No announcements yet.</p></div>`;return;}
+  const typeClass={info:'ab-info',warn:'ab-warn',success:'ab-success'};
+  const typeLabel={info:'Info',warn:'Warning',success:'Success'};
+  el.innerHTML=anns.map(a=>`
+    <div class="announce-item">
+      <span class="announce-badge ${typeClass[a.type]||'ab-info'}">${typeLabel[a.type]||'Info'}</span>
+      <div style="flex:1;"><div style="font-size:.88rem;color:var(--cream);margin-bottom:2px;">${a.title}</div><div style="font-size:.79rem;color:var(--muted);">${a.msg}</div><div style="font-size:.72rem;color:var(--muted);margin-top:4px;">Expires: ${new Date(a.expiry).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</div></div>
+      <button class="btn btn-danger btn-sm" onclick="deleteAnn('${a.id}')">✕</button>
+    </div>
+  `).join('');
+}
+function deleteAnn(id){Store.set('sm_announcements',(Store.get('sm_announcements')||[]).filter(a=>a.id!==id));renderAnnouncements();showToast('Removed','info');}
+renderAnnouncements();
+
+// ── STORAGE STATS ──
+function renderStorageStats(){
+  const keys=['sm_accounts','sm_tasks','sm_sessions','sm_subjects','sm_notes','sm_planner','sm_admin_log','sm_announcements'];
+  const el=document.getElementById('storage-stats');
+  const items=keys.map(k=>{
+    const raw=localStorage.getItem(k)||'';
+    const kb=(raw.length/1024).toFixed(1);
+    const count=JSON.parse(raw||'[]')?.length||0;
+    return{k,kb,count};
+  });
+  const totalKb=items.reduce((a,i)=>a+parseFloat(i.kb),0);
+  el.innerHTML=items.map(i=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:.82rem;padding:6px 0;border-bottom:1px solid var(--border);">
+      <span style="color:var(--muted);font-family:var(--font-mono);font-size:.75rem;">${i.k.replace('sm_','')}</span>
+      <div style="display:flex;gap:12px;"><span style="color:var(--text);">${i.count} items</span><span style="color:var(--muted);">${i.kb} KB</span></div>
+    </div>
+  `).join('')+`<div style="padding-top:8px;font-size:.82rem;display:flex;justify-content:space-between;"><span style="color:var(--muted);">Total Used</span><span style="color:var(--gold);font-family:var(--font-mono);">${totalKb.toFixed(1)} KB</span></div>`;
+}
+
+// ── EXPORT ──
+function exportData(key){
+  const data=Store.get(key)||[];
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`studymind_${key}_${today()}.json`;a.click();
+  showToast('Exported '+key,'success');logAction('info','Exported: '+key);
+}
+function exportAllData(){
+  const keys=['sm_accounts','sm_tasks','sm_sessions','sm_subjects','sm_notes','sm_planner','sm_announcements'];
+  const all={};keys.forEach(k=>all[k]=Store.get(k)||[]);
+  all.exported=new Date().toISOString();
+  const blob=new Blob([JSON.stringify(all,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`studymind_full_backup_${today()}.json`;a.click();
+  showToast('Full backup exported!','success');logAction('info','Full backup exported');
+}
+
+// ── DANGER ZONE ──
+function clearAllTasks(){if(!confirm('DELETE ALL TASKS? This cannot be undone!'))return;Store.set('sm_tasks',[]);showToast('All tasks cleared','info');renderAdminStats();logAction('danger','Admin cleared all tasks');}
+function clearAllSessions(){if(!confirm('DELETE ALL STUDY SESSIONS?'))return;Store.set('sm_sessions',[]);showToast('Sessions cleared','info');renderAdminStats();logAction('danger','Admin cleared all sessions');}
+function resetUser(){if(!confirm('Reset current user data (tasks, sessions, subjects, notes)?'))return;['sm_tasks','sm_sessions','sm_subjects','sm_notes'].forEach(k=>Store.set(k,[]));showToast('User data reset','info');renderAdminStats();logAction('danger','Admin reset current user data');}
+function nukeAll(){
+  if(!confirm('⚠️ NUCLEAR OPTION: Delete ALL data including users?\n\nThis will log everyone out and erase everything. There is no undo.'))return;
+  if(prompt('Type "NUKE" to confirm:')!=='NUKE'){showToast('Cancelled','info');return;}
+  localStorage.clear();showToast('All data erased. Redirecting…','error');
+  setTimeout(()=>location.href='login.html',1500);
+}
+
+// ── SETTINGS ──
+function loadSettings(){
+  const defs={sm_cfg_registration:true,sm_cfg_automark:true,sm_cfg_ai:true,sm_cfg_focus:true,sm_cfg_adminlink:true};
+  const map={sm_cfg_registration:'tog-register',sm_cfg_automark:'tog-automark',sm_cfg_ai:'tog-ai',sm_cfg_focus:'tog-focus',sm_cfg_adminlink:'tog-adminlink'};
+  Object.entries(map).forEach(([key,togId])=>{
+    const val=Store.get(key);const on=val===null?defs[key]:val;
+    const el=document.getElementById(togId);if(el)el.classList.toggle('on',on);
+  });
+}
+function toggleSetting(togId,key,def){
+  const el=document.getElementById(togId);
+  const newVal=!el.classList.contains('on');
+  el.classList.toggle('on',newVal);
+  Store.set(key,newVal);
+  showToast('Setting '+(newVal?'enabled':'disabled'),'info');
+  logAction('info',`Setting "${key}" set to ${newVal}`);
+}
+function saveAdminPw(){
+  const pw=document.getElementById('admin-pw-input').value;
+  if(pw.length<4){showToast('Password too short','error');return;}
+  Store.set('sm_admin_pw',pw);showToast('Admin password updated','success');
+  document.getElementById('admin-pw-input').value='';
+  logAction('info','Admin password changed');
+}
+loadSettings();
+logAction('info','Admin panel accessed by '+getUser()?.name);
+</script>
+</body>
+</html>

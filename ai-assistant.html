@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>StudyMind — AI Advisor</title>
+<link rel="stylesheet" href="styles.css"/>
+<style>
+.chat-wrap{display:grid;grid-template-columns:260px 1fr;gap:18px;align-items:start;}
+@media(max-width:700px){.chat-wrap{grid-template-columns:1fr;}}
+
+.ai-sidebar{display:flex;flex-direction:column;gap:14px;}
+.profile-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;text-align:center;}
+.ai-avatar{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--gold-dim),var(--gold));display:flex;align-items:center;justify-content:center;font-size:1.6rem;margin:0 auto 10px;box-shadow:0 0 18px rgba(57,255,20,.2);}
+.ai-name{font-family:var(--font-display);font-size:1rem;color:var(--cream);margin-bottom:3px;}
+.ai-desc{font-size:.76rem;color:var(--muted);line-height:1.5;}
+.ai-status{display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--success);margin-top:8px;justify-content:center;}
+.ai-status-dot{width:7px;height:7px;border-radius:50%;background:var(--success);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+
+.prompt-chips{display:flex;flex-direction:column;gap:7px;}
+.prompt-chip{padding:9px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:.79rem;color:var(--muted);cursor:pointer;transition:all .15s;line-height:1.4;}
+.prompt-chip:hover{border-color:var(--gold-dim);color:var(--text);background:var(--surface2);}
+
+.context-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;}
+.context-card h4{font-size:.78rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:10px;}
+.ctx-item{display:flex;justify-content:space-between;font-size:.78rem;padding:5px 0;border-bottom:1px solid var(--border);}
+.ctx-item:last-child{border-bottom:none;}
+.ctx-label{color:var(--muted);}
+.ctx-value{color:var(--gold);font-family:var(--font-mono);}
+
+.chat-main{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);display:flex;flex-direction:column;min-height:600px;}
+.chat-header{padding:14px 18px;border-bottom:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;gap:10px;border-radius:var(--radius) var(--radius) 0 0;}
+.chat-header-title{font-family:var(--font-display);font-size:1rem;color:var(--cream);flex:1;}
+
+.chat-messages{flex:1;padding:18px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;max-height:460px;}
+.msg{display:flex;gap:11px;align-items:flex-start;}
+.msg.user{flex-direction:row-reverse;}
+.msg-avatar{width:30px;height:30px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.85rem;}
+.msg-avatar.ai-av{background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:#090d09;font-weight:700;}
+.msg-avatar.user-av{background:var(--surface3);border:1px solid var(--border);}
+.msg-bubble{max-width:78%;padding:11px 14px;border-radius:12px;font-size:.85rem;line-height:1.65;}
+.msg.ai .msg-bubble{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px 12px 12px 12px;}
+.msg.user .msg-bubble{background:rgba(57,255,20,.08);border:1px solid rgba(57,255,20,.2);color:var(--cream);border-radius:12px 4px 12px 12px;}
+.msg-time{font-size:.68rem;color:var(--muted);margin-top:4px;}
+.typing-dots span{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--muted);margin:0 2px;animation:bounce .9s infinite;}
+.typing-dots span:nth-child(2){animation-delay:.15s;}
+.typing-dots span:nth-child(3){animation-delay:.3s;}
+@keyframes bounce{0%,60%,100%{transform:translateY(0);}30%{transform:translateY(-6px);}}
+
+.chat-input-area{padding:14px 18px;border-top:1px solid var(--border);display:flex;gap:9px;align-items:flex-end;background:var(--surface2);border-radius:0 0 var(--radius) var(--radius);}
+.chat-input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;font-size:.86rem;color:var(--text);font-family:var(--font-body);outline:none;resize:none;max-height:120px;min-height:42px;transition:border-color .2s;}
+.chat-input:focus{border-color:var(--gold);}
+.send-btn{background:var(--gold);border:none;border-radius:var(--radius-sm);width:42px;height:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1rem;color:#090d09;flex-shrink:0;transition:all .15s;}
+.send-btn:hover{background:var(--gold-light);transform:scale(1.04);}
+.send-btn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+.powered-by{text-align:center;font-size:.73rem;color:var(--muted);padding:8px;border-top:1px solid var(--border);}
+.clear-btn{font-size:.75rem;color:var(--muted);background:none;border:none;cursor:pointer;padding:4px 8px;border-radius:4px;transition:color .15s;}
+.clear-btn:hover{color:var(--danger);}
+
+/* ── PLANNER WIDGET inside chat ── */
+.planner-widget{background:var(--surface);border:1px solid var(--gold-dim);border-radius:var(--radius);overflow:hidden;margin-top:10px;max-width:100%;}
+.planner-widget-header{background:linear-gradient(90deg,var(--gold-dim),rgba(57,255,20,.08));padding:12px 16px;display:flex;align-items:center;gap:10px;}
+.planner-widget-header h3{font-family:var(--font-display);font-size:.95rem;color:var(--gold);flex:1;}
+.planner-table{width:100%;border-collapse:collapse;font-size:.78rem;}
+.planner-table th{background:var(--surface2);padding:8px 10px;text-align:left;color:var(--muted);font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border);}
+.planner-table td{padding:8px 10px;border-bottom:1px solid rgba(31,46,31,.6);color:var(--text);vertical-align:top;}
+.planner-table tr:last-child td{border-bottom:none;}
+.planner-table tr:hover td{background:var(--surface2);}
+.slot-badge{display:inline-block;padding:2px 7px;border-radius:100px;font-size:.67rem;font-weight:600;}
+.slot-study{background:rgba(57,255,20,.1);color:var(--success);border:1px solid rgba(57,255,20,.2);}
+.slot-break{background:rgba(74,159,181,.1);color:var(--info);border:1px solid rgba(74,159,181,.2);}
+.slot-review{background:rgba(212,168,67,.1);color:var(--warn);border:1px solid rgba(212,168,67,.2);}
+.slot-exercise{background:rgba(192,80,58,.08);color:var(--danger);border:1px solid rgba(192,80,58,.2);}
+.planner-actions{padding:10px 14px;background:var(--surface2);display:flex;gap:8px;flex-wrap:wrap;}
+.planner-note{padding:8px 14px;font-size:.75rem;color:var(--muted);border-top:1px solid var(--border);background:var(--surface);}
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="index.html" class="nav-brand">Study<em>Mind</em></a>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">🏠 <span>Dashboard</span></a>
+    <a href="planner.html" class="nav-link">📅 <span>Planner</span></a>
+    <a href="tasks.html" class="nav-link">✅ <span>Tasks</span></a>
+    <a href="subjects.html" class="nav-link">📚 <span>Subjects</span></a>
+    <a href="pomodoro.html" class="nav-link">🍅 <span>Pomodoro</span></a>
+    <a href="notes.html" class="nav-link">📝 <span>Notes</span></a>
+    <a href="ai-assistant.html" class="nav-link active">🤖 <span>AI Advisor</span></a>
+    <a href="focus-detector.html" class="nav-link">👁 <span>Focus Detector</span></a>
+    <a href="admin.html" class="nav-link" id="admin-nav-link" style="display:none;">🛡 <span>Admin</span></a>
+  </div>
+  <div class="nav-right">
+    <div class="nav-time" id="clock">--:--</div>
+    <div class="user-chip">
+      <div class="user-avatar">?</div><span class="user-name">Student</span>
+      <div class="user-dropdown">
+        <a href="index.html">🏠 Dashboard</a><hr/>
+        <button onclick="switchAccount()">🔄 Switch Account</button>
+        <button class="logout-btn" onclick="logout()">🚪 Log Out</button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="container">
+    <div class="page-header">
+      <h1>AI <em>Advisor</em></h1>
+      <div class="divider"></div>
+      <p>Your personal study coach — fully offline, no API key needed. Ask anything about studying, schedules, or academic advice.</p>
+    </div>
+
+    <div class="chat-wrap">
+      <!-- Sidebar -->
+      <div class="ai-sidebar">
+        <div class="profile-card">
+          <div class="ai-avatar">🤖</div>
+          <div class="ai-name">StudyMind AI</div>
+          <div class="ai-desc">Built-in smart advisor · Works offline, no API key needed. Study plans, tips &amp; motivation.</div>
+          <div class="ai-status"><span class="ai-status-dot"></span>Always Online</div>
+        </div>
+
+        <div class="card" style="padding:14px;">
+          <div style="font-size:.78rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:10px;">Quick Questions</div>
+          <div class="prompt-chips" id="prompt-chips"></div>
+        </div>
+
+        <div class="context-card" id="context-card">
+          <h4>📊 Your Context</h4>
+          <div id="context-data"></div>
+        </div>
+      </div>
+
+      <!-- Chat -->
+      <div class="chat-main">
+        <div class="chat-header">
+          <div style="font-size:1.2rem;">🤖</div>
+          <div class="chat-header-title">AI Study Advisor</div>
+          <button class="clear-btn" onclick="clearChat()">🗑 Clear</button>
+        </div>
+        <div class="chat-messages" id="chat-messages"></div>
+        <div class="chat-input-area">
+          <textarea class="chat-input" id="chat-input" placeholder="Ask about study strategies, schedule help, motivation…" rows="1"></textarea>
+          <button class="send-btn" id="send-btn" onclick="sendMessage()">➤</button>
+        </div>
+        <div class="powered-by">🧠 Built-in AI — Fully offline · No API key required · Personalised to your study data</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="app.js"></script>
+<script src="firebase-integration.js"></script>
+<script>
+const user = requireAuth();
+startClock(document.getElementById('clock'));
+renderUserChip();
+
+let messages = [];
+
+// ─────────────────────────────────────────────────────────────────
+// SAMPLE STUDY PLANNER DATA
+// ─────────────────────────────────────────────────────────────────
+const SAMPLE_PLANNER = {
+  title: "📅 Sample Weekly Study Plan",
+  subtitle: "A balanced 6-day study schedule (Mon–Sat)",
+  days: [
+    {
+      day: "Monday",
+      sessions: [
+        { time: "6:00–7:00 AM",  activity: "Morning Revision",       type: "review",   notes: "Review yesterday's notes" },
+        { time: "9:00–11:00 AM", activity: "Core Subject Study",     type: "study",    notes: "Deep focus — 2 Pomodoros" },
+        { time: "11:15–12:00",   activity: "Practice Problems",      type: "study",    notes: "Apply what you learned" },
+        { time: "2:00–3:00 PM",  activity: "Reading / Theory",       type: "review",   notes: "Secondary subject" },
+        { time: "5:00–5:30 PM",  activity: "Exercise / Walk",        type: "exercise", notes: "Refresh your brain" },
+        { time: "8:00–9:00 PM",  activity: "Light Review + Notes",   type: "review",   notes: "Summarise the day" },
+      ]
+    },
+    {
+      day: "Tuesday",
+      sessions: [
+        { time: "6:00–7:00 AM",  activity: "Morning Revision",       type: "review",   notes: "Flash cards / mind maps" },
+        { time: "9:00–11:00 AM", activity: "Math / Analytical",      type: "study",    notes: "Problem-solving focus" },
+        { time: "11:15–12:15",   activity: "Past Paper Practice",    type: "study",    notes: "Timed exam conditions" },
+        { time: "2:00–4:00 PM",  activity: "Project Work",           type: "study",    notes: "Assignments / lab reports" },
+        { time: "5:00–5:30 PM",  activity: "Break / Hobby",          type: "break",    notes: "Mental reset" },
+        { time: "8:00–9:00 PM",  activity: "Conceptual Review",      type: "review",   notes: "Difficult topics only" },
+      ]
+    },
+    {
+      day: "Wednesday",
+      sessions: [
+        { time: "7:00–8:00 AM",  activity: "Light Reading",          type: "review",   notes: "General knowledge / news" },
+        { time: "9:00–11:00 AM", activity: "Science / Theory",       type: "study",    notes: "Concepts + diagrams" },
+        { time: "11:30–1:00 PM", activity: "Group Study / Discussion",type:"study",    notes: "Teach what you know" },
+        { time: "3:00–4:30 PM",  activity: "Writing Practice",       type: "study",    notes: "Essays / answers" },
+        { time: "5:00–5:30 PM",  activity: "Exercise",               type: "exercise", notes: "Yoga or stretching" },
+        { time: "8:00–8:45 PM",  activity: "Night Recap",            type: "review",   notes: "Brief daily summary" },
+      ]
+    },
+    {
+      day: "Thursday",
+      sessions: [
+        { time: "6:00–7:00 AM",  activity: "Morning Revision",       type: "review",   notes: "Weakest topic first" },
+        { time: "9:00–11:30 AM", activity: "Core Subject Deep Dive", type: "study",    notes: "Long Pomodoro blocks" },
+        { time: "2:00–3:30 PM",  activity: "Mock Test",              type: "study",    notes: "Simulate real exam" },
+        { time: "4:00–4:30 PM",  activity: "Error Analysis",         type: "review",   notes: "Review wrong answers" },
+        { time: "5:00–5:30 PM",  activity: "Walk / Relax",           type: "break",    notes: "Unplug completely" },
+        { time: "8:00–9:00 PM",  activity: "Spaced Repetition",      type: "review",   notes: "Anki / flash cards" },
+      ]
+    },
+    {
+      day: "Friday",
+      sessions: [
+        { time: "7:00–8:00 AM",  activity: "Weak Areas Focus",       type: "study",    notes: "Targeted improvement" },
+        { time: "9:00–11:00 AM", activity: "Full Chapter Revision",  type: "review",   notes: "Big-picture review" },
+        { time: "11:30–1:00 PM", activity: "Practice Questions",     type: "study",    notes: "Mix of all topics" },
+        { time: "3:00–4:00 PM",  activity: "Creative Notes / Maps",  type: "review",   notes: "Visual summaries" },
+        { time: "5:30–6:00 PM",  activity: "Light Exercise",         type: "exercise", notes: "End-of-week reset" },
+        { time: "8:00–9:00 PM",  activity: "Week Wrap-Up",           type: "review",   notes: "What went well / next week" },
+      ]
+    },
+    {
+      day: "Saturday",
+      sessions: [
+        { time: "8:00–10:00 AM", activity: "Full Mock Exam",         type: "study",    notes: "Timed — no interruptions" },
+        { time: "10:30–11:30",   activity: "Exam Review",            type: "review",   notes: "Score & analyse mistakes" },
+        { time: "12:00–1:00 PM", activity: "Topic Deep Dive",        type: "study",    notes: "One weak chapter fully" },
+        { time: "3:00–4:00 PM",  activity: "Light Prep for Week",    type: "review",   notes: "Plan next week's goals" },
+        { time: "5:00–7:00 PM",  activity: "Free Time / Hobby",      type: "break",    notes: "Recharge — you earned it!" },
+      ]
+    }
+  ],
+  tips: [
+    "Use Pomodoro: 25 min study + 5 min break",
+    "Sleep 7–8 hours — memory consolidation happens at night",
+    "Review notes within 24 hours to retain 80% more",
+    "Drink water regularly — dehydration kills focus",
+    "Sunday is your rest day — protect it"
+  ]
+};
+
+// ─────────────────────────────────────────────────────────────────
+// OFFLINE AI ENGINE — Rule-based Knowledge Base
+// ─────────────────────────────────────────────────────────────────
+
+const KB = {
+  // Intent detection patterns
+  intents: [
+    { id: 'planner',     patterns: ['planner','schedule','plan','timetable','routine','weekly','daily','show me a plan','study plan','study schedule','make a schedule','create a plan'] },
+    { id: 'pomodoro',    patterns: ['pomodoro','tomato','25','timer','focus timer','technique'] },
+    { id: 'memory',      patterns: ['memori','memoris','memoriz','remember','retain','recall','forget','flash','spaced repetition','anki'] },
+    { id: 'sleep',       patterns: ['sleep','rest','tired','exhausted','night','bed','nap','hours of sleep'] },
+    { id: 'burnout',     patterns: ['burnout','burn out','burnt out','overwhelm','stress','anxious','anxiety','demotivat','motivation','struggling','can\'t focus','cannot focus','no energy','give up'] },
+    { id: 'focus',       patterns: ['focus','distract','concentrat','attention','procrastinat','phone','social media','tiktok','instagram','gaming'] },
+    { id: 'notes',       patterns: ['note','notes','note-taking','cornell','mind map','summarise','summarize','highlight'] },
+    { id: 'exam',        patterns: ['exam','test','revision','revise','prepare','paper','mark','score','grade','cbse','jee','neet','board'] },
+    { id: 'time',        patterns: ['time management','time manage','wasting time','productive','productivity','busy','no time','efficient'] },
+    { id: 'subject',     patterns: ['subject','math','physics','chemistry','biology','english','history','computer','science','which subject'] },
+    { id: 'morning',     patterns: ['morning','wake up','early','alarm','6am','5am','breakfast'] },
+    { id: 'break',       patterns: ['break','pause','relax','rest','recharge','leisure','hobby'] },
+    { id: 'hello',       patterns: ['hi','hello','hey','good morning','good evening','good afternoon','what can you','help me','who are you'] },
+    { id: 'exercise',    patterns: ['exercise','workout','gym','sport','walk','yoga','physical','health','fit'] },
+    { id: 'diet',        patterns: ['food','eat','diet','nutrition','energy','brain food','water','hydrat'] },
+    { id: 'group',       patterns: ['group study','study group','partner','with friends','peer','classmate'] },
+    { id: 'online',      patterns: ['online','youtube','course','video','lecture','khan','coursera','udemy'] },
+    { id: 'customize',   patterns: ['change','modify','adjust','customize','different','update','alter','tailor','make it','7 day','5 day','3 day','for me','my subjects','engineering','medical','school','college'] },
+    { id: 'stats',       patterns: ['how am i doing','my stats','my progress','progress','statistics','done','completed'] },
+  ],
+
+  detectIntent(text) {
+    const lower = text.toLowerCase();
+    const scores = {};
+    for (const intent of this.intents) {
+      scores[intent.id] = 0;
+      for (const p of intent.patterns) {
+        if (lower.includes(p)) scores[intent.id]++;
+      }
+    }
+    const best = Object.entries(scores).sort((a,b)=>b[1]-a[1])[0];
+    return best[1] > 0 ? best[0] : 'fallback';
+  },
+
+  responses: {
+    hello(ctx) {
+      const hr = new Date().getHours();
+      const g = hr<12?'Good morning':'Good afternoon';
+      return `${g}, **${ctx.name}**! 👋
+
+I'm your **StudyMind AI Advisor** — fully offline and always ready to help.
+
+Here's what I can do for you:
+- 📅 Show or build a **personalised study schedule**
+- 🧠 Share **memory & revision techniques**
+- 🎯 Give **focus and productivity tips**
+- 😴 Advice on **sleep, breaks & well-being**
+- 📝 Help with **note-taking strategies**
+- 🍅 Explain the **Pomodoro technique**
+
+You currently have **${ctx.pending} pending tasks** across **${ctx.subs.length} subject(s)**.
+
+Try asking: *"Show me a study plan"* or *"How do I memorise faster?"*`;
+    },
+
+    planner(ctx) {
+      return { type: 'planner', plan: SAMPLE_PLANNER, msg:
+`Here's your **Sample Weekly Study Plan** 📅
+
+This is a balanced 6-day schedule designed for students. It follows proven principles:
+- **Morning sessions** for deep focus
+- **Afternoon** for practice & application
+- **Evening** for light review & spaced repetition
+- **Sunday** kept free for rest
+
+You can **customise** this plan — just tell me:
+- Your subjects (e.g. "I study Physics, Math, Chemistry")
+- Your available hours (e.g. "I can only study 4 hours a day")
+- Your exam date (e.g. "my exam is in 3 weeks")
+
+I'll adjust the plan accordingly! 👇` };
+    },
+
+    customize(ctx) {
+      const lower = arguments[1]||'';
+      // Extract subject hints
+      const subHints = [];
+      ['math','physics','chemistry','biology','english','history','computer','economics','accounts','geography'].forEach(s=>{
+        if(lower.includes(s)) subHints.push(s.charAt(0).toUpperCase()+s.slice(1));
+      });
+      const subs = subHints.length ? subHints : (ctx.subs.length ? ctx.subs : ['Core Subject A','Core Subject B','Core Subject C']);
+
+      const hoursMatch = lower.match(/(\d+)\s*hour/);
+      const hoursPerDay = hoursMatch ? parseInt(hoursMatch[1]) : 6;
+
+      const customPlan = {
+        title: `📅 Customised Study Plan for ${ctx.name}`,
+        subtitle: `${hoursPerDay}h/day schedule · Subjects: ${subs.slice(0,3).join(', ')}`,
+        days: ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map((day, i) => ({
+          day,
+          sessions: [
+            { time: '6:30–7:00 AM',  activity: 'Morning Revision',      type: 'review', notes: 'Quick recap of prev day' },
+            { time: '9:00–10:30 AM', activity: subs[0]||'Subject 1',    type: 'study',  notes: '2 Pomodoro blocks' },
+            { time: '10:45–12:00',   activity: subs[1]||'Subject 2',    type: 'study',  notes: 'Problem solving' },
+            ...(hoursPerDay >= 5 ? [{ time: '2:00–3:30 PM', activity: subs[2]||'Subject 3', type:'study', notes:'Concepts + practice' }] : []),
+            ...(hoursPerDay >= 6 ? [{ time: '4:00–4:45 PM', activity: 'Past Papers / MCQs', type:'review', notes:'Exam practice' }] : []),
+            { time: '8:00–9:00 PM',  activity: 'Night Review',          type: 'review', notes: 'Light summary + notes' },
+          ]
+        })),
+        tips: [
+          `Study ${subs[0]} when your energy is highest (usually morning)`,
+          'Review within 24 hours to lock in memory',
+          'Take a 5-min break every 25 minutes (Pomodoro)',
+          'Sleep 7–8 hours — critical for exam memory',
+          'Test yourself daily — active recall beats re-reading'
+        ]
+      };
+
+      return { type: 'planner', plan: customPlan, msg:
+`I've **customised your study plan** based on your requirements! 📅
+
+Subjects covered: **${subs.slice(0,3).join(', ')}**
+Daily study time: **${hoursPerDay} hours**
+
+The plan is now tailored to your subjects. You can ask me to:
+- *"Add more hours"* or *"Reduce to 4 hours"*
+- *"Focus more on ${subs[0]||'a subject'}"*
+- *"Add exam prep mode"*` };
+    },
+
+    pomodoro() {
+      return `## 🍅 The Pomodoro Technique
+
+The **Pomodoro Technique** is one of the most effective time-management methods:
+
+**How it works:**
+1. Pick one task to focus on
+2. Set a timer for **25 minutes** — work with full focus
+3. Take a **5-minute break** (stand up, stretch, water)
+4. After **4 Pomodoros**, take a **15–30 min longer break**
+
+**Why it works:**
+- Creates urgency (ticking clock = action)
+- Prevents burnout with mandatory breaks
+- Makes big tasks feel manageable
+- Trains deep focus over time
+
+**StudyMind Tip:** Use the built-in 🍅 Pomodoro timer in your app — it logs your sessions automatically and tracks your focus time on the Dashboard!
+
+Pro tip: Before each Pomodoro, write down **exactly** what you'll do in those 25 minutes. This removes decision fatigue.`;
+    },
+
+    memory() {
+      return `## 🧠 How to Memorise Faster
+
+**Top scientifically-proven techniques:**
+
+**1. Spaced Repetition**
+Review material at increasing intervals: after 1 day → 3 days → 1 week → 2 weeks. Apps like Anki do this automatically.
+
+**2. Active Recall**
+Instead of re-reading, close the book and try to recall what you studied. This strengthens neural pathways far more than passive reading.
+
+**3. The Feynman Technique**
+Explain a concept in simple words as if teaching a 10-year-old. Gaps in your explanation reveal what you don't actually know.
+
+**4. Chunking**
+Break large information into logical groups. Our brain handles 4–7 items at a time best.
+
+**5. Mind Maps & Visual Notes**
+Draw concepts visually. Your brain retains images 60,000× faster than text.
+
+**StudyMind Tip:** Review your notes **within 24 hours** of learning to retain up to 80% more. Set a daily review task! ✅`;
+    },
+
+    sleep() {
+      return `## 😴 Sleep & Academic Performance
+
+**How much sleep do you need?**
+- School students (13–17): **8–10 hours**
+- College students (18–25): **7–9 hours**
+- During exams: **never cut below 6 hours**
+
+**Why sleep is non-negotiable for studying:**
+- Your brain **consolidates memories during sleep** — cutting sleep means forgetting what you studied
+- Sleep deprivation reduces focus by **up to 40%**
+- One all-nighter can impair cognition for **2 full days**
+
+**Tips for better study sleep:**
+- Stop screens **30 minutes before bed**
+- Keep a consistent sleep/wake time (even weekends)
+- Don't study in bed — your brain will associate it with alertness
+- A **20-minute nap** after lunch boosts afternoon focus dramatically
+
+**The golden rule:** 8 hours of sleep + 6 hours of studying beats 4 hours of sleep + 10 hours of half-conscious studying every time.`;
+    },
+
+    burnout() {
+      return `## 💪 Dealing with Burnout & Overwhelm
+
+First — **it's completely normal** and affects almost every student at some point. Here's how to recover:
+
+**Immediate actions:**
+- Take a **genuine rest day** — not "light studying", actual rest
+- Go outside, even for 20 minutes — sunlight resets your cortisol
+- Talk to someone — isolation amplifies burnout
+
+**Medium-term recovery:**
+- Reduce your daily goals to **50% for one week** — momentum matters more than volume
+- Identify what drained you: too many tasks? No breaks? Poor sleep?
+- Add one enjoyable activity to each day — study shouldn't be 100% of your life
+
+**Prevention strategies:**
+- Take your **5-min Pomodoro breaks seriously** — they aren't optional
+- Schedule a **half-day off every week** (Sunday works well)
+- Track small wins — even 1 task completed is a victory
+
+**Remember:** A rested brain studying for 4 focused hours outperforms a burnt-out brain studying for 10 miserable hours.
+
+You're doing better than you think. 🌱`;
+    },
+
+    focus() {
+      return `## 🎯 How to Stay Focused While Studying
+
+**Environment setup:**
+- **Phone in another room** or on Do Not Disturb — notifications destroy deep work
+- Use a dedicated study spot (not your bed)
+- Background: silence, white noise, or lo-fi music (no lyrics)
+- Good lighting — dim rooms cause drowsiness
+
+**Before you start:**
+- Write down the **exact task** for this session (not "study math" but "complete integration exercises 5–12")
+- Remove clutter from your desk — visual chaos = mental chaos
+- Water bottle on desk — dehydration cuts focus by 20%
+
+**During study:**
+- **25/5 Pomodoro** is scientifically the best ratio
+- When a distracting thought appears, write it down and return to work
+- If you zone out, notice it without judgment and refocus
+
+**Digital detox tips:**
+- Use apps like Forest, Freedom, or just put the phone in a drawer
+- Tell friends/family you're in study mode for X hours
+- Reward yourself after focused sessions (not before)
+
+StudyMind Tip: The 👁 **Focus Detector** in your app uses your camera to detect focus loss in real time!`;
+    },
+
+    notes() {
+      return `## 📝 Note-Taking That Actually Works
+
+**The Cornell Method:**
+Divide your page into 3 sections:
+- Right (70%): Main notes during lecture/reading
+- Left (30%): Key questions or cues (fill after)
+- Bottom: Summary in your own words
+
+**Mind Mapping:**
+Start with the central topic, branch out to subtopics, then details. Perfect for visual learners and connecting concepts.
+
+**The 3R Method:**
+1. **Record** — take notes during study
+2. **Reduce** — condense to key points after
+3. **Recite** — cover notes and recall from memory
+
+**Digital vs Paper:**
+- Paper: Better for retention and drawing diagrams
+- Digital: Better for searching, organising, and sharing
+
+**What NOT to do:**
+- Don't copy text word-for-word — paraphrase in your own language
+- Don't highlight everything — it creates an illusion of studying
+- Don't organise notes excessively before understanding the content
+
+**StudyMind Tip:** Use the 📝 **Notes** section in your app to store and organise your study notes by subject!`;
+    },
+
+    exam() {
+      return `## 📚 Exam Preparation Strategy
+
+**The 4-week countdown:**
+- **Week 4:** Complete all topics, identify weak areas
+- **Week 3:** Deep revision of weak areas, start past papers
+- **Week 2:** Daily mock tests, error analysis, spaced repetition
+- **Week 1:** Light revision, full mocks, sleep well
+
+**Daily exam prep routine:**
+1. Morning: Study new/tough content (fresh brain)
+2. Afternoon: Practice questions and past papers
+3. Evening: Review errors and summarise key points
+
+**Past paper strategy:**
+- Always do papers **under timed conditions**
+- After each paper, categorise errors: concept gap / silly mistake / time issue
+- Keep an "error journal" — revisit before the exam
+
+**The night before:**
+- Light revision only (no new topics!)
+- Prepare your materials
+- Sleep by 10 PM — your brain needs rest, not last-minute cramming
+
+**StudyMind Tip:** Use the ✅ **Tasks** feature to schedule daily revision tasks, and the 📅 **Planner** to map out your exam countdown!`;
+    },
+
+    time() {
+      return `## ⏰ Time Management for Students
+
+**The Eisenhower Matrix:**
+Sort all tasks into:
+- **Urgent + Important:** Do immediately
+- **Important + Not Urgent:** Schedule it (this is where studying lives!)
+- **Urgent + Not Important:** Delegate or minimise
+- **Not Urgent + Not Important:** Eliminate
+
+**Weekly planning routine (Sunday evening):**
+1. List all tasks for the week
+2. Estimate time for each
+3. Assign to specific days
+4. Leave 20% buffer for surprises
+
+**Time audit:**
+Track how you spend 24 hours for one day. Most students are surprised how much time "disappears" to scrolling, indecision, and transitions.
+
+**The 2-minute rule:**
+If something takes under 2 minutes, do it immediately — don't add it to a list.
+
+**Protected time blocks:**
+- Block your best 2 hours for your hardest subject
+- Treat these like a class you cannot skip
+
+**StudyMind Tip:** Use the 📅 **Planner** to visually schedule your week — seeing it on a calendar makes you 3× more likely to follow through!`;
+    },
+
+    exercise() {
+      return `## 🏃 Exercise & Brain Performance
+
+**Exercise directly boosts studying:**
+- Increases **BDNF** (brain-derived neurotrophic factor) — the brain's "growth hormone"
+- Improves memory retention by up to **20%**
+- Reduces cortisol (stress hormone) that blocks learning
+- Boosts dopamine, which drives motivation
+
+**Best timing:**
+- **Morning exercise** → best for energy and mood all day
+- **Post-lunch walk (20 min)** → prevents afternoon slump
+- **Evening workout** → good for stress release, but not within 2hrs of sleep
+
+**What counts as exercise:**
+- Brisk 30-min walk: Very effective
+- Yoga/stretching: Great for focus and anxiety
+- 20 push-ups between Pomodoros: Surprisingly effective
+- Dance / Zumba: Fun and high impact
+
+**The minimum dose:**
+150 minutes of moderate exercise per week = optimal brain performance. That's just 25 min/day, 6 days a week.
+
+Don't skip exercise during exams — it's when you need it most!`;
+    },
+
+    diet() {
+      return `## 🥗 Brain Food & Study Nutrition
+
+**Top brain-boosting foods:**
+- **Blueberries** — improve memory and concentration
+- **Nuts (especially walnuts)** — omega-3 for brain health
+- **Dark chocolate (70%+)** — improves focus (in moderation)
+- **Eggs** — choline for memory neurotransmitters
+- **Oats** — slow-release energy for sustained focus
+- **Green tea** — gentle caffeine + L-theanine for calm focus
+
+**What to avoid while studying:**
+- Heavy meals (causes drowsiness)
+- Sugary snacks (energy spike then crash)
+- Too much coffee (anxiety, jitters)
+
+**Hydration is critical:**
+- Even **2% dehydration** reduces cognitive performance
+- Aim for **2–3 litres of water** daily
+- Keep a water bottle at your desk
+
+**Study snack formula:**
+Protein + Complex carb + Healthy fat = Sustained energy
+Example: Apple slices + peanut butter + a handful of nuts
+
+Avoid studying on an empty stomach — hunger hijacks your focus.`;
+    },
+
+    group() {
+      return `## 👥 Group Study — When It Works
+
+**Group study works best when:**
+- Everyone has already studied the material independently
+- You have a specific agenda (not just "let's study together")
+- Groups are **3–5 people max** (larger = more distraction)
+- You use it for **explaining, quizzing, and debating** concepts
+
+**Effective group session structure:**
+1. 10 min: Review individual questions/confusions
+2. 30–40 min: Take turns explaining concepts to each other
+3. 15 min: Quiz each other (best learning method!)
+4. 5 min: Summarise what you all learned
+
+**Warning signs your group study isn't working:**
+- You're chatting more than studying (after 10–15 min)
+- Someone always needs help but never teaches back
+- You feel tired but not productive after
+
+**The 80/20 rule:**
+80% of your study should be solo (deep work), 20% can be group (consolidation and teaching). Never flip this ratio.`;
+    },
+
+    morning() {
+      return `## 🌅 Building a Productive Morning Routine
+
+**The ideal student morning (6:00 AM start):**
+- **6:00 AM** — Wake up (no snooze!)
+- **6:05–6:15** — Drink water, light stretching
+- **6:15–6:30** — Brief review of yesterday's notes
+- **6:30–7:00** — Breakfast (don't skip it — brain needs glucose)
+- **7:00–8:00** — First study block (freshest brain state)
+- **8:00+** — Normal day
+
+**Why morning study works:**
+- Cortisol peaks in the morning → maximum alertness
+- No notifications have disrupted your focus yet
+- Willpower and self-discipline are highest early in the day
+
+**Tips to actually wake up:**
+- Set your alarm across the room
+- Sleep and wake at the same time 7 days a week
+- Make your morning enjoyable — good tea/coffee, favourite music
+- Have a clear plan for the morning session the night before
+
+Start small: even a 30-minute morning study session before school/college compounds dramatically over a semester.`;
+    },
+
+    stats(ctx) {
+      const pct = ctx.total ? Math.round(ctx.done/ctx.total*100) : 0;
+      const hrs = Math.floor(ctx.studyMins/60);
+      const mins = ctx.studyMins % 60;
+
+      let performance = 'getting started';
+      if (pct >= 80) performance = 'excellent';
+      else if (pct >= 60) performance = 'good';
+      else if (pct >= 40) performance = 'building momentum';
+
+      return `## 📊 Your StudyMind Stats
+
+Here's how you're doing, **${ctx.name}**:
+
+- ✅ **Tasks Completed:** ${ctx.done} / ${ctx.total} (${pct}% completion rate)
+- ⏳ **Pending Tasks:** ${ctx.pending}
+- ⏱️ **Total Study Time Logged:** ${hrs}h ${mins}m
+- 📚 **Subjects Tracked:** ${ctx.subs.length > 0 ? ctx.subs.join(', ') : 'None yet'}
+
+**Performance:** You're ${performance}! ${pct >= 60 ? '🌟 Keep it up!' : '📈 Small consistent steps lead to big results.'}
+
+${ctx.pending > 5 ? '⚠️ You have ' + ctx.pending + ' pending tasks — try clearing 2–3 today to build momentum.' : ''}
+${ctx.studyMins < 60 ? '💡 Tip: Log at least one Pomodoro session today to build your streak!' : ''}
+${ctx.subs.length === 0 ? '📚 Add your subjects in the Subjects section so I can give you personalised advice!' : ''}`;
+    },
+
+    online() {
+      return `## 💻 Best Free Online Study Resources
+
+**For all subjects:**
+- **Khan Academy** (khanacademy.org) — Best for Maths, Science, Economics
+- **NPTEL** — Free IIT/IISc lectures (excellent for engineering)
+- **YouTube + specific channels** — 3Blue1Brown (Maths), CrashCourse (everything)
+
+**For competitive exams (JEE/NEET/UPSC):**
+- **Unacademy** — Free live classes
+- **Physics Wallah** — Free & affordable JEE/NEET content
+- **Vedantu** — Live tutoring
+
+**For skill development:**
+- **Coursera / edX** — University courses (audit for free)
+- **freeCodeCamp** — Coding
+- **Duolingo** — Languages
+
+**For note organisation:**
+- **Notion** — All-in-one workspace
+- **Obsidian** — Linked notes / knowledge graph
+- **Anki** — Spaced repetition flash cards (free)
+
+**StudyMind Tip:** Whatever you learn online, bring it back to your 📝 Notes and ✅ Tasks in StudyMind to stay accountable!`;
+    },
+
+    break() {
+      return `## ⏸️ Why Breaks Are Part of Studying
+
+**Breaks are NOT wasted time — they are required:**
+- Your brain needs to consolidate information
+- Fatigue silently destroys comprehension without you noticing
+- The "diffuse mode" of thinking (activated during breaks) often produces creative insights
+
+**Effective break activities:**
+- Short walk (even 5 min outside)
+- Light stretching
+- Making tea/coffee
+- Breathing exercises
+- Looking at something distant (rest your eyes)
+
+**Ineffective "breaks":**
+- Social media / short-form video (TikTok, Reels) — these are more mentally draining than studying!
+- Texting conversations that carry emotional weight
+- Starting a new topic casually
+
+**Pomodoro break schedule:**
+- Every 25 min → 5-min break
+- Every 2 hours → 15–20 min break
+- Every 4–5 hours → 1-hour proper break
+
+**Weekend rest:**
+Protect at least 1 full rest day per week (Sunday is ideal). Students who rest one day per week are more productive over a semester than those who grind 7 days.`;
+    },
+
+    subject(ctx) {
+      return `## 📚 Subject Strategy Tips
+
+**General principles:**
+- Study your **hardest subject first** (highest willpower moment = morning)
+- Alternate between high-focus (Maths, Physics) and lighter subjects (reading-based)
+- Don't study the same subject for more than 90 minutes continuously
+
+**Subject-specific approaches:**
+
+**Mathematics:**
+Practice > theory. Do problems daily, even if just 5. Review your mistakes immediately.
+
+**Science (Physics/Chemistry/Biology):**
+Understand the concept fully before memorising formulas. Draw diagrams. Use past papers heavily.
+
+**English / Humanities:**
+Read widely. Write practice answers and get them reviewed. Learn key vocabulary in context.
+
+**Computer Science:**
+Code every day. Read → understand → code → debug. Theory without practice doesn't stick.
+
+${ctx.subs.length > 0 ? `\n**Your subjects:** ${ctx.subs.join(', ')}\n\nAsk me about any specific subject for tailored advice!` : '\n**Tip:** Add your subjects in the 📚 Subjects section for personalised advice!'}`;
+    },
+
+    fallback(ctx) {
+      const tips = [
+        `Try asking: *"Show me a study plan"* or *"How do I memorise faster?"*`,
+        `I can help with Pomodoro technique, sleep advice, focus strategies, exam prep, and more!`,
+        `Ask: *"I study Physics and Math — give me a plan"* for a personalised schedule.`,
+        `Type *"my stats"* to see your progress, or *"how to take notes"* for note-taking tips.`,
+      ];
+      return `I didn't quite catch that — I'm still learning! 🤖
+
+${tips[Math.floor(Math.random()*tips.length)]}
+
+Here are things I can definitely help with:
+- 📅 Study plans & schedules
+- 🧠 Memory techniques
+- 🍅 Pomodoro & focus
+- 😴 Sleep & well-being
+- 📝 Note-taking
+- 📚 Exam preparation
+- 💪 Burnout & motivation`;
+    }
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────
+// CONTEXT BUILDER
+// ─────────────────────────────────────────────────────────────────
+function buildContext() {
+  const tasks = Store.get('sm_tasks') || [];
+  const subs = Store.get('sm_subjects') || [];
+  const sessions = Store.get('sm_sessions') || [];
+  const done = tasks.filter(t => t.done && !t.distracted).length;
+  const pending = tasks.filter(t => !t.done && !t.distracted).length;
+  const studyMins = sessions.reduce((s, x) => s + (x.minutes || 0), 0);
+  const total = tasks.length;
+
+  document.getElementById('context-data').innerHTML = `
+    <div class="ctx-item"><span class="ctx-label">Subjects</span><span class="ctx-value">${subs.length}</span></div>
+    <div class="ctx-item"><span class="ctx-label">Tasks Done</span><span class="ctx-value">${done}</span></div>
+    <div class="ctx-item"><span class="ctx-label">Pending</span><span class="ctx-value">${pending}</span></div>
+    <div class="ctx-item"><span class="ctx-label">Study Time</span><span class="ctx-value">${Math.floor(studyMins/60)}h ${studyMins%60}m</span></div>
+    <div class="ctx-item"><span class="ctx-label">Level</span><span class="ctx-value">${user.level || '—'}</span></div>
+  `;
+  return { subs: subs.map(s => s.name), done, pending, studyMins, total, level: user.level, name: user.name };
+}
+buildContext();
+
+// ─────────────────────────────────────────────────────────────────
+// PLANNER WIDGET RENDERER
+// ─────────────────────────────────────────────────────────────────
+function renderPlannerWidget(plan) {
+  const badgeClass = { study: 'slot-study', review: 'slot-review', break: 'slot-break', exercise: 'slot-exercise' };
+  return `
+    <div class="planner-widget">
+      <div class="planner-widget-header">
+        <div>
+          <h3>${plan.title}</h3>
+          <div style="font-size:.72rem;color:rgba(57,255,20,.6);">${plan.subtitle}</div>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="planner-table">
+          <thead>
+            <tr>
+              <th style="width:100px;">Day</th>
+              <th style="width:130px;">Time</th>
+              <th>Activity</th>
+              <th style="display:none;"></th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${plan.days.map(day => day.sessions.map((s, i) => `
+              <tr>
+                ${i === 0 ? `<td rowspan="${day.sessions.length}" style="font-weight:600;color:var(--gold);vertical-align:top;padding-top:10px;">${day.day}</td>` : ''}
+                <td style="font-family:var(--font-mono);font-size:.72rem;white-space:nowrap;">${s.time}</td>
+                <td>
+                  <span class="slot-badge ${badgeClass[s.type] || 'slot-study'}">${s.type}</span>
+                  <span style="margin-left:6px;">${s.activity}</span>
+                </td>
+                <td style="color:var(--muted);font-size:.73rem;">${s.notes}</td>
+              </tr>
+            `).join('')).join('')}
+          </tbody>
+        </table>
+      </div>
+      ${plan.tips ? `
+      <div class="planner-note">
+        <strong style="color:var(--gold);">💡 Tips:</strong>
+        ${plan.tips.map(t => `<span style="display:inline-block;margin:2px 8px 2px 0;">• ${t}</span>`).join('')}
+      </div>` : ''}
+      <div class="planner-actions">
+        <button class="btn btn-primary btn-sm" onclick="importPlannerToApp()">📥 Import to My Planner</button>
+        <button class="btn btn-ghost btn-sm" onclick="usePrompt('Customise this plan for my subjects')">✏️ Customise This Plan</button>
+        <button class="btn btn-ghost btn-sm" onclick="usePrompt('Make a 7 day study plan')">📅 7-Day Version</button>
+      </div>
+    </div>
+  `;
+}
+
+// Import sample planner sessions to the app
+function importPlannerToApp() {
+  const ctx = buildContext();
+  const plannerSessions = Store.get('sm_planner') || [];
+  const now = new Date();
+  let added = 0;
+
+  SAMPLE_PLANNER.days.forEach((dayPlan, i) => {
+    const d = new Date(now);
+    // Get next Monday and offset by day index
+    const dow = now.getDay();
+    const toMonday = dow === 0 ? 1 : (8 - dow);
+    d.setDate(now.getDate() + toMonday + i);
+    const ds = d.toISOString().split('T')[0];
+
+    dayPlan.sessions.slice(0, 3).forEach(s => {
+      const colors = { study: '#39ff14', review: '#d4a843', break: '#4a9fb5', exercise: '#c0503a' };
+      plannerSessions.push({
+        id: uid(), title: s.activity,
+        subject: ctx.subs[0] || 'General',
+        date: ds, start: s.time.split('–')[0].replace(' AM','').replace(' PM','').trim(),
+        minutes: 60, notes: s.notes,
+        color: colors[s.type] || '#39ff14',
+        type: 'planned', created: new Date().toISOString()
+      });
+      added++;
+    });
+  });
+
+  Store.set('sm_planner', plannerSessions);
+  showToast(`✅ ${added} sessions imported to your Planner!`, 'success');
+  addMessage('ai', `I've imported **${added} study sessions** to your Planner for next week! 📅\n\nGo to the 📅 **Planner** page to see them on the calendar and adjust times as needed.`);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// QUICK PROMPTS
+// ─────────────────────────────────────────────────────────────────
+const PROMPTS = [
+  "📅 Show me a study plan",
+  "🧠 How to memorise faster?",
+  "😴 How many hours sleep?",
+  "🍅 Explain Pomodoro technique",
+  "💪 I'm feeling burnt out",
+  "🎯 How to stay focused?",
+  "📝 Best note-taking methods",
+  "📊 Show my stats",
+  "✏️ Customise plan for my subjects",
+  "📚 Exam preparation tips",
+];
+
+document.getElementById('prompt-chips').innerHTML = PROMPTS.map(p =>
+  `<div class="prompt-chip" onclick="usePrompt('${p.replace(/'/g,"&apos;")}')">${p}</div>`
+).join('');
+
+function usePrompt(text) {
+  document.getElementById('chat-input').value = text;
+  sendMessage();
+}
+
+// ─────────────────────────────────────────────────────────────────
+// CHAT ENGINE
+// ─────────────────────────────────────────────────────────────────
+function renderMarkdown(text) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/^### (.+)$/gm, '<div style="font-weight:700;color:var(--cream);margin-top:8px;">$1</div>')
+    .replace(/^## (.+)$/gm, '<div style="font-family:var(--font-display);font-size:1rem;color:var(--cream);margin-top:10px;margin-bottom:4px;">$1</div>')
+    .replace(/^- (.+)$/gm, '<div style="display:flex;gap:7px;margin:3px 0;"><span style="color:var(--gold);flex-shrink:0;">•</span><span>$1</span></div>')
+    .replace(/^(\d+)\. (.+)$/gm, '<div style="display:flex;gap:7px;margin:3px 0;"><span style="color:var(--gold);flex-shrink:0;font-family:var(--font-mono);font-size:.8rem;">$1.</span><span>$2</span></div>')
+    .replace(/\n\n/g, '<br/><br/>').replace(/\n/g, '<br/>');
+}
+
+function addMessage(role, content, isTyping = false) {
+  const container = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  const time = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  const avatarContent = role === 'ai' ? '🤖' : (user.name.charAt(0).toUpperCase());
+  div.innerHTML = `
+    <div class="msg-avatar ${role === 'ai' ? 'ai-av' : 'user-av'}">${avatarContent}</div>
+    <div style="flex:1;">
+      <div class="msg-bubble">${isTyping ? '<div class="typing-dots"><span></span><span></span><span></span></div>' : renderMarkdown(content)}</div>
+      ${!isTyping ? `<div class="msg-time">${time}</div>` : ''}
+    </div>
+  `;
+  if (isTyping) div.id = 'typing-indicator';
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  return div;
+}
+
+function addPlannerMessage(role, textContent, plan) {
+  const container = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  const time = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  div.innerHTML = `
+    <div class="msg-avatar ai-av">🤖</div>
+    <div style="flex:1;">
+      <div class="msg-bubble">${renderMarkdown(textContent)}</div>
+      ${renderPlannerWidget(plan)}
+      <div class="msg-time">${time}</div>
+    </div>
+  `;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+async function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+
+  input.value = '';
+  input.style.height = 'auto';
+
+  addMessage('user', text);
+  messages.push({ role: 'user', content: text });
+
+  const btn = document.getElementById('send-btn');
+  btn.disabled = true;
+  const typingEl = addMessage('ai', '', true);
+
+  // Simulate a slight thinking delay (feels natural)
+  await new Promise(r => setTimeout(r, 600 + Math.random() * 500));
+
+  typingEl.remove();
+
+  const ctx = buildContext();
+  const intent = KB.detectIntent(text);
+  const lower = text.toLowerCase();
+
+  let reply;
+  let isPlannerResponse = false;
+  let plannerData = null;
+
+  try {
+    if (intent === 'planner') {
+      const result = KB.responses.planner(ctx);
+      isPlannerResponse = true;
+      plannerData = result.plan;
+      reply = result.msg;
+    } else if (intent === 'customize') {
+      const result = KB.responses.customize(ctx, lower);
+      if (result && result.type === 'planner') {
+        isPlannerResponse = true;
+        plannerData = result.plan;
+        reply = result.msg;
+      } else {
+        reply = KB.responses.fallback(ctx);
+      }
+    } else if (intent === 'pomodoro') {
+      reply = KB.responses.pomodoro();
+    } else if (intent === 'memory') {
+      reply = KB.responses.memory();
+    } else if (intent === 'sleep') {
+      reply = KB.responses.sleep();
+    } else if (intent === 'burnout') {
+      reply = KB.responses.burnout();
+    } else if (intent === 'focus') {
+      reply = KB.responses.focus();
+    } else if (intent === 'notes') {
+      reply = KB.responses.notes();
+    } else if (intent === 'exam') {
+      reply = KB.responses.exam();
+    } else if (intent === 'time') {
+      reply = KB.responses.time();
+    } else if (intent === 'exercise') {
+      reply = KB.responses.exercise();
+    } else if (intent === 'diet') {
+      reply = KB.responses.diet();
+    } else if (intent === 'group') {
+      reply = KB.responses.group();
+    } else if (intent === 'morning') {
+      reply = KB.responses.morning();
+    } else if (intent === 'stats') {
+      reply = KB.responses.stats(ctx);
+    } else if (intent === 'online') {
+      reply = KB.responses.online();
+    } else if (intent === 'break') {
+      reply = KB.responses.break();
+    } else if (intent === 'subject') {
+      reply = KB.responses.subject(ctx);
+    } else if (intent === 'hello') {
+      reply = KB.responses.hello(ctx);
+    } else {
+      reply = KB.responses.fallback(ctx);
+    }
+
+    if (isPlannerResponse && plannerData) {
+      addPlannerMessage('ai', reply, plannerData);
+    } else {
+      addMessage('ai', reply);
+    }
+    messages.push({ role: 'assistant', content: reply });
+
+  } catch (err) {
+    addMessage('ai', `Something went wrong internally. Try rephrasing your question!`);
+  }
+
+  if (messages.length > 40) messages = messages.slice(-40);
+  btn.disabled = false;
+}
+
+function clearChat() {
+  if (messages.length > 0 && !confirm('Clear the conversation?')) return;
+  messages = [];
+  document.getElementById('chat-messages').innerHTML = '';
+  addWelcome();
+}
+
+function addWelcome() {
+  const ctx = buildContext();
+  const hr = new Date().getHours();
+  const g = hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening';
+  const welcomeText = `${g}, **${ctx.name}**! 👋
+
+I'm your **StudyMind AI Advisor** — fully offline, no internet or API key needed.
+
+I can help you with:
+- 📅 **Study plans** — ask *"Show me a study plan"* to see a sample!
+- 🧠 Memory & revision techniques
+- 🎯 Focus, Pomodoro & productivity
+- 😴 Sleep & well-being advice
+- 📝 Note-taking strategies
+- 💪 Burnout & exam stress
+
+You have **${ctx.pending} pending task(s)** and **${ctx.subs.length} subject(s)** set up.
+
+What would you like help with today?`;
+
+  addMessage('ai', welcomeText);
+}
+
+// Auto-resize textarea
+document.getElementById('chat-input').addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+document.getElementById('chat-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+
+addWelcome();
+</script>
+<script>
+(function(){const u=typeof getUser==='function'?getUser():null;if(u&&u.isAdmin){const el=document.getElementById('admin-nav-link');if(el)el.style.display='flex';}})();
+</script>
+</body>
+</html>

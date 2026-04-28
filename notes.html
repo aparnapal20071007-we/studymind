@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>StudyMind — Notes</title>
+<link rel="stylesheet" href="styles.css"/>
+<style>
+.notes-layout{display:grid;grid-template-columns:260px 1fr;gap:18px;min-height:calc(100vh - 60px - 80px);}
+@media(max-width:700px){.notes-layout{grid-template-columns:1fr;}}
+
+/* Sidebar */
+.folder-sidebar{display:flex;flex-direction:column;gap:0;}
+.folder-header{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.folder-header h3{font-family:var(--font-display);font-size:.95rem;color:var(--cream);}
+.folder-item{display:flex;align-items:center;gap:10px;padding:11px 18px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .15s;color:var(--muted);font-size:.85rem;}
+.folder-item:hover{background:var(--surface2);color:var(--text);}
+.folder-item.active{background:rgba(212,168,67,.08);color:var(--gold);border-right:2px solid var(--gold);}
+.folder-icon{font-size:1rem;}
+.folder-count{margin-left:auto;font-size:.7rem;background:var(--surface3);border-radius:100px;padding:1px 7px;color:var(--muted);}
+.folder-actions{display:none;}
+.folder-item:hover .folder-actions{display:flex;gap:3px;margin-left:auto;}
+.folder-actions button{background:none;border:none;cursor:pointer;color:var(--muted);font-size:.75rem;padding:2px 4px;border-radius:4px;}
+.folder-actions button:hover{color:var(--danger);}
+
+/* Notes list */
+.notes-list-col{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column;}
+.notes-list-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:var(--surface2);}
+.notes-list-header h3{font-family:var(--font-display);font-size:1rem;color:var(--cream);flex:1;}
+.note-thumb{padding:13px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;}
+.note-thumb:hover{background:var(--surface2);}
+.note-thumb.active{background:rgba(212,168,67,.06);border-right:2px solid var(--gold);}
+.note-thumb-title{font-size:.88rem;color:var(--text);font-weight:500;margin-bottom:3px;}
+.note-thumb-title.selected{color:var(--gold);}
+.note-thumb-preview{font-size:.76rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;}
+.note-thumb-meta{font-size:.7rem;color:var(--muted);margin-top:4px;}
+
+/* Editor */
+.note-editor-wrap{display:flex;flex-direction:column;height:100%;}
+.editor-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:var(--surface2);}
+.note-title-input{flex:1;background:transparent;border:none;font-family:var(--font-display);font-size:1.1rem;color:var(--cream);outline:none;padding:0;}
+.note-title-input::placeholder{color:var(--muted);}
+.note-textarea{flex:1;background:transparent;border:none;outline:none;padding:18px;font-family:var(--font-body);font-size:.88rem;color:var(--text);line-height:1.75;resize:none;min-height:300px;}
+.note-textarea::placeholder{color:var(--muted);}
+.editor-footer{padding:10px 18px;border-top:1px solid var(--border);display:flex;align-items:center;gap:12px;font-size:.75rem;color:var(--muted);}
+
+/* Dual pane */
+.notes-main{display:grid;grid-template-columns:220px 1fr;gap:0;flex:1;overflow:hidden;}
+@media(max-width:600px){.notes-main{grid-template-columns:1fr;}}
+
+/* Add folder modal */
+.folder-colors{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
+.fc-opt{width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s;}
+.fc-opt.selected{transform:scale(1.2);border-color:#fff;}
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="index.html" class="nav-brand">Study<em>Mind</em></a>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">🏠 <span>Dashboard</span></a>
+    <a href="planner.html" class="nav-link">📅 <span>Planner</span></a>
+    <a href="tasks.html" class="nav-link">✅ <span>Tasks</span></a>
+    <a href="subjects.html" class="nav-link">📚 <span>Subjects</span></a>
+    <a href="pomodoro.html" class="nav-link">🍅 <span>Pomodoro</span></a>
+    <a href="notes.html" class="nav-link active">📝 <span>Notes</span></a>
+    <a href="ai-assistant.html" class="nav-link">🤖 <span>AI Advisor</span></a>
+    <a href="focus-detector.html" class="nav-link">👁 <span>Focus Detector</span></a>
+    <a href="admin.html" class="nav-link" id="admin-nav-link" style="display:none;">🛡 <span>Admin</span></a>
+  </div>
+  <div class="nav-right">
+    <div class="nav-time" id="clock">--:--</div>
+    <div class="user-chip">
+      <div class="user-avatar">?</div><span class="user-name">Student</span>
+      <div class="user-dropdown">
+        <button onclick="switchAccount()">🔄 Switch Account</button>
+        <button class="logout-btn" onclick="logout()">🚪 Log Out</button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="container">
+    <div class="page-header">
+      <h1>My <em>Notes</em></h1>
+      <div class="divider"></div>
+      <p>Organize notes into folders. Each note is saved with date &amp; time.</p>
+    </div>
+
+    <div class="notes-layout">
+      <!-- Folder sidebar -->
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div class="folder-header">
+          <h3>📁 Folders</h3>
+          <button class="btn btn-primary btn-sm btn-icon" onclick="openModal('add-folder-modal')" title="New Folder">+</button>
+        </div>
+        <div id="folder-list"></div>
+      </div>
+
+      <!-- Notes + Editor -->
+      <div style="display:flex;flex-direction:column;gap:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+        <div class="notes-main">
+          <!-- Note thumbs -->
+          <div style="border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;">
+            <div class="notes-list-header">
+              <h3 id="folder-title">Select a folder</h3>
+              <button class="btn btn-primary btn-sm" onclick="newNote()" id="new-note-btn" style="display:none;">+ Note</button>
+            </div>
+            <div id="note-list" style="overflow-y:auto;flex:1;"></div>
+          </div>
+
+          <!-- Editor -->
+          <div class="note-editor-wrap" id="editor-panel" style="display:none;">
+            <div class="editor-header">
+              <input class="note-title-input" id="note-title" placeholder="Note title…" oninput="markDirty()"/>
+              <button class="btn btn-primary btn-sm" onclick="saveNote()">💾 Save</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteNote()">🗑</button>
+            </div>
+            <textarea class="note-textarea" id="note-body" placeholder="Start writing your note here…" oninput="markDirty()"></textarea>
+            <div class="editor-footer">
+              <span id="note-saved-at">Not saved yet</span>
+              <span>·</span>
+              <span id="word-count">0 words</span>
+              <span>·</span>
+              <span id="dirty-indicator" style="color:var(--warn);display:none;">Unsaved changes</span>
+            </div>
+          </div>
+
+          <!-- No note selected -->
+          <div id="no-note-panel" style="display:flex;align-items:center;justify-content:center;flex:1;">
+            <div class="empty-state">
+              <div style="font-size:3rem;margin-bottom:12px;">📝</div>
+              <h3>Select a folder &amp; note</h3>
+              <p>Or create a new folder to get started</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Folder Modal -->
+<div class="modal-overlay" id="add-folder-modal" style="display:none;">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">📁 New Folder</div>
+      <button class="btn btn-ghost btn-icon btn-sm" onclick="closeModal('add-folder-modal')">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div class="input-group"><label>Folder Name</label><input type="text" id="folder-name" placeholder="e.g. Mathematics Notes"/></div>
+      <div class="input-group">
+        <label>Icon</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          📁 📚 🔬 🧮 📐 💻 🌍 📝 🎨 🏛️ ⚙️ 🧬 📊 🎵 🧪
+        </div>
+        <input type="text" id="folder-icon" value="📁" placeholder="Paste an emoji" maxlength="2" style="margin-top:6px;width:70px;text-align:center;font-size:1.2rem;"/>
+      </div>
+      <div class="input-group">
+        <label>Color</label>
+        <div class="folder-colors" id="folder-colors">
+          <div class="fc-opt selected" data-c="#d4a843" style="background:#d4a843;" onclick="selectFolderColor(this)"></div>
+          <div class="fc-opt" data-c="#5a9e6a" style="background:#5a9e6a;" onclick="selectFolderColor(this)"></div>
+          <div class="fc-opt" data-c="#4a7fb5" style="background:#4a7fb5;" onclick="selectFolderColor(this)"></div>
+          <div class="fc-opt" data-c="#c07842" style="background:#c07842;" onclick="selectFolderColor(this)"></div>
+          <div class="fc-opt" data-c="#9a6ab5" style="background:#9a6ab5;" onclick="selectFolderColor(this)"></div>
+          <div class="fc-opt" data-c="#c05a6a" style="background:#c05a6a;" onclick="selectFolderColor(this)"></div>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="addFolder()">Create Folder</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="app.js"></script>
+<script src="firebase-integration.js"></script>
+<script>
+requireAuth();
+startClock(document.getElementById('clock'));
+renderUserChip();
+
+let selectedFolder=null;
+let selectedNote=null;
+let selectedFolderColor='#d4a843';
+let dirty=false;
+
+function selectFolderColor(el){
+  document.querySelectorAll('.fc-opt').forEach(e=>e.classList.remove('selected'));
+  el.classList.add('selected');selectedFolderColor=el.dataset.c;
+}
+
+function addFolder(){
+  const name=document.getElementById('folder-name').value.trim();
+  const icon=document.getElementById('folder-icon').value||'📁';
+  if(!name){showToast('Enter a folder name','error');return;}
+  Store.push('sm_folders',{id:uid(),name,icon,color:selectedFolderColor,created:new Date().toISOString()});
+  document.getElementById('folder-name').value='';
+  closeModal('add-folder-modal');showToast('Folder created!','success');
+  renderFolders();
+}
+
+function renderFolders(){
+  const folders=Store.get('sm_folders')||[];
+  const notes=Store.get('sm_notes')||[];
+  const el=document.getElementById('folder-list');
+  if(!folders.length){el.innerHTML=`<div style="padding:20px;text-align:center;font-size:.82rem;color:var(--muted);">No folders yet.<br>Click + to create one.</div>`;return;}
+  el.innerHTML=folders.map(f=>{
+    const count=notes.filter(n=>n.folderId===f.id).length;
+    return `<div class="folder-item ${selectedFolder===f.id?'active':''}" onclick="selectFolderFn('${f.id}')">
+      <span class="folder-icon" style="color:${f.color}">${f.icon}</span>
+      <span style="flex:1;">${f.name}</span>
+      <span class="folder-count">${count}</span>
+      <div class="folder-actions" onclick="event.stopPropagation()">
+        <button onclick="deleteFolder('${f.id}')" title="Delete folder">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function selectFolderFn(id){
+  if(dirty&&!confirm('You have unsaved changes. Discard?'))return;
+  dirty=false;selectedFolder=id;selectedNote=null;
+  document.getElementById('editor-panel').style.display='none';
+  document.getElementById('no-note-panel').style.display='flex';
+  const folders=Store.get('sm_folders')||[];
+  const f=folders.find(x=>x.id===id);
+  document.getElementById('folder-title').textContent=f?`${f.icon} ${f.name}`:'Notes';
+  document.getElementById('new-note-btn').style.display='flex';
+  renderFolders();renderNotes();
+}
+
+function deleteFolder(id){
+  if(!confirm('Delete this folder and all its notes?'))return;
+  Store.set('sm_folders',(Store.get('sm_folders')||[]).filter(f=>f.id!==id));
+  Store.set('sm_notes',(Store.get('sm_notes')||[]).filter(n=>n.folderId!==id));
+  if(selectedFolder===id){selectedFolder=null;selectedNote=null;}
+  showToast('Folder deleted','info');renderFolders();renderNotes();
+}
+
+function renderNotes(){
+  const notes=(Store.get('sm_notes')||[]).filter(n=>n.folderId===selectedFolder).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
+  const el=document.getElementById('note-list');
+  if(!notes.length){el.innerHTML=`<div style="padding:18px;text-align:center;font-size:.8rem;color:var(--muted);">No notes yet.<br>Click "+ Note" to start writing.</div>`;return;}
+  el.innerHTML=notes.map(n=>`
+    <div class="note-thumb ${selectedNote===n.id?'active':''}" onclick="selectNote('${n.id}')">
+      <div class="note-thumb-title ${selectedNote===n.id?'selected':''}">${n.title||'Untitled'}</div>
+      <div class="note-thumb-preview">${n.body.slice(0,70)||'(empty)'}</div>
+      <div class="note-thumb-meta">📅 ${formatDateTime(n.updatedAt)}</div>
+    </div>`).join('');
+}
+
+function newNote(){
+  if(!selectedFolder){showToast('Select a folder first','error');return;}
+  if(dirty&&!confirm('Discard unsaved changes?'))return;
+  dirty=false;selectedNote=null;
+  document.getElementById('note-title').value='';
+  document.getElementById('note-body').value='';
+  document.getElementById('note-saved-at').textContent='Not saved yet';
+  document.getElementById('word-count').textContent='0 words';
+  document.getElementById('dirty-indicator').style.display='none';
+  document.getElementById('editor-panel').style.display='flex';
+  document.getElementById('no-note-panel').style.display='none';
+  document.getElementById('note-title').focus();
+}
+
+function selectNote(id){
+  if(dirty&&!confirm('Discard unsaved changes?'))return;
+  selectedNote=id;
+  const n=(Store.get('sm_notes')||[]).find(x=>x.id===id);
+  if(!n)return;
+  document.getElementById('note-title').value=n.title;
+  document.getElementById('note-body').value=n.body;
+  document.getElementById('note-saved-at').textContent='Saved: '+formatDateTime(n.updatedAt);
+  updateWordCount();
+  dirty=false;document.getElementById('dirty-indicator').style.display='none';
+  document.getElementById('editor-panel').style.display='flex';
+  document.getElementById('no-note-panel').style.display='none';
+  renderNotes();
+}
+
+function saveNote(){
+  const title=document.getElementById('note-title').value.trim()||'Untitled';
+  const body=document.getElementById('note-body').value;
+  const now=new Date().toISOString();
+  if(selectedNote){
+    Store.update('sm_notes',selectedNote,{title,body,updatedAt:now});
+  }else{
+    const note={id:uid(),folderId:selectedFolder,title,body,createdAt:now,updatedAt:now};
+    Store.push('sm_notes',note);
+    selectedNote=note.id;
+  }
+  dirty=false;
+  document.getElementById('note-saved-at').textContent='Saved: '+formatDateTime(now);
+  document.getElementById('dirty-indicator').style.display='none';
+  showToast('Note saved!','success');
+  renderNotes();
+}
+
+function deleteNote(){
+  if(!selectedNote){return;}
+  if(!confirm('Delete this note?'))return;
+  Store.set('sm_notes',(Store.get('sm_notes')||[]).filter(n=>n.id!==selectedNote));
+  selectedNote=null;dirty=false;
+  document.getElementById('editor-panel').style.display='none';
+  document.getElementById('no-note-panel').style.display='flex';
+  showToast('Note deleted','info');renderNotes();
+}
+
+function markDirty(){dirty=true;document.getElementById('dirty-indicator').style.display='inline';updateWordCount();}
+function updateWordCount(){const words=document.getElementById('note-body').value.trim().split(/\s+/).filter(Boolean).length;document.getElementById('word-count').textContent=words+' words';}
+
+// Auto-save every 30s
+setInterval(()=>{if(dirty&&selectedFolder)saveNote();},30000);
+
+// Keyboard shortcut Ctrl+S
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();saveNote();}});
+
+renderFolders();renderNotes();
+</script>
+<script>
+(function(){const u=typeof getUser==='function'?getUser():null;if(u&&u.isAdmin){const el=document.getElementById('admin-nav-link');if(el)el.style.display='flex';}})();
+</script>
+</body>
+</html>

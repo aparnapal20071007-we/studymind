@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>StudyMind — Planner</title>
+<link rel="stylesheet" href="styles.css"/>
+<style>
+/* ── Planner-specific styles that extend styles.css ── */
+
+/* Settings panel */
+.planner-layout{display:grid;grid-template-columns:300px 1fr;gap:20px;align-items:start;}
+@media(max-width:860px){.planner-layout{grid-template-columns:1fr;}}
+
+.settings-panel{display:flex;flex-direction:column;gap:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+.settings-section{padding:16px 18px;border-bottom:1px solid var(--border);}
+.settings-section:last-child{border-bottom:none;}
+.settings-label{font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:10px;font-family:var(--font-mono);}
+
+.field-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;color:var(--text);font-size:.87rem;font-family:var(--font-body);transition:border-color .15s;}
+.field-input:focus{outline:none;border-color:var(--gold-dim);}
+.field-input option{background:var(--surface2);}
+
+/* Subject toggles */
+.subject-toggles{display:flex;flex-direction:column;gap:7px;}
+.subj-toggle{display:flex;align-items:center;gap:11px;padding:10px 13px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:all .18s;user-select:none;}
+.subj-toggle:hover{border-color:var(--gold-dim);}
+.subj-toggle.active{border-color:var(--s-color);background:var(--s-bg);}
+.subj-toggle.inactive{opacity:.4;filter:grayscale(.8);}
+.subj-dot{width:9px;height:9px;border-radius:50%;background:var(--s-color);flex-shrink:0;}
+.subj-name{flex:1;font-size:.85rem;color:var(--text);}
+.subj-toggle.active .subj-name{color:var(--s-text);}
+.subj-check{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700;color:transparent;flex-shrink:0;transition:all .15s;}
+.subj-toggle.active .subj-check{background:var(--s-color);border-color:var(--s-color);color:#000;}
+.subj-hrs{font-size:.72rem;color:var(--muted);margin-top:1px;}
+
+.no-subjects-msg{padding:14px;text-align:center;font-size:.83rem;color:var(--muted);line-height:1.7;}
+.no-subjects-msg a{color:var(--gold);}
+
+/* Generate button area */
+.gen-btn-row{display:flex;gap:9px;padding:16px 18px;}
+
+/* ── Plan output panel ── */
+.plan-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+
+.plan-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.plan-title{font-family:var(--font-display);font-size:1.05rem;color:var(--cream);}
+.plan-meta-badges{display:flex;gap:7px;flex-wrap:wrap;}
+.plan-badge{font-size:.68rem;font-family:var(--font-mono);padding:3px 9px;border-radius:4px;border:1px solid var(--border);color:var(--muted);background:var(--surface2);letter-spacing:.05em;text-transform:uppercase;}
+.plan-badge.gold{border-color:var(--gold-dim);color:var(--gold);}
+
+/* Legend */
+.plan-legend{display:flex;gap:14px;flex-wrap:wrap;padding:10px 20px;border-bottom:1px solid var(--border);background:var(--surface2);}
+.legend-pip{display:flex;align-items:center;gap:6px;font-size:.72rem;color:var(--muted);}
+.legend-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0;}
+
+/* Weekly grid */
+.plan-grid-scroll{overflow-x:auto;}
+.plan-grid-inner{display:grid;min-width:580px;}
+.pgrid-corner{background:var(--surface2);padding:7px 6px;font-size:.6rem;font-family:var(--font-mono);color:var(--muted);text-align:center;border-right:1px solid var(--border);border-bottom:1px solid var(--border);}
+.pgrid-day{text-align:center;padding:7px 4px;font-size:.68rem;font-family:var(--font-mono);letter-spacing:.12em;color:var(--muted);border-right:1px solid var(--border);border-bottom:2px solid var(--border);background:var(--surface2);}
+.pgrid-day.today{color:var(--gold);border-bottom:2px solid var(--gold);}
+.pgrid-time{font-size:.65rem;font-family:var(--font-mono);color:var(--muted);padding:0 7px;text-align:right;border-right:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--surface2);height:52px;display:flex;align-items:flex-start;justify-content:flex-end;padding-top:5px;}
+.pgrid-slot{border-right:1px solid var(--border);border-bottom:1px solid var(--border);height:52px;padding:3px;}
+
+/* Block styles — match the premium AI feel */
+.pblock{height:100%;border-radius:5px;padding:4px 6px;font-size:.7rem;display:flex;flex-direction:column;justify-content:center;overflow:hidden;animation:blockIn .35s ease both;}
+@keyframes blockIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.pblock .bsub{font-weight:700;font-size:.68rem;white-space:nowrap;overflow:hidden;letter-spacing:.04em;}
+.pblock .btopic{font-size:.6rem;opacity:.78;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* Themed subject blocks */
+.pblock.subj{background:var(--s-bg);border-left:3px solid var(--s-color);color:var(--s-text);}
+.pblock.rev{background:rgba(212,168,67,.08);border-left:3px solid var(--gold-dim);color:var(--gold);}
+.pblock.brk{background:var(--surface2);border-left:3px solid var(--border);color:var(--muted);}
+
+/* Stats strip */
+.plan-stats{display:flex;border-top:1px solid var(--border);flex-wrap:wrap;}
+.pstat{flex:1;min-width:120px;padding:12px 16px;border-right:1px solid var(--border);}
+.pstat:last-child{border-right:none;}
+.pstat-label{font-size:.68rem;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:3px;}
+.pstat-val{font-family:var(--font-display);font-size:1.2rem;}
+.pstat-sub{font-size:.68rem;color:var(--muted);margin-top:1px;}
+
+/* Footer */
+.plan-footer{padding:11px 20px;background:var(--surface2);border-top:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.plan-footer-tip{font-size:.78rem;color:var(--muted);flex:1;font-style:italic;}
+.plan-footer-tip strong{color:var(--gold);font-style:normal;}
+.plan-saved-tag{font-size:.68rem;font-family:var(--font-mono);color:var(--success);letter-spacing:.08em;display:none;}
+.plan-saved-tag.show{display:inline;}
+
+/* Empty / no-plan */
+.plan-empty{padding:52px 24px;text-align:center;color:var(--muted);}
+.plan-empty-icon{font-size:2.8rem;margin-bottom:12px;opacity:.4;}
+.plan-empty-text{font-size:.88rem;line-height:1.7;}
+.plan-empty-text a{color:var(--gold);}
+
+/* AI-style generation header badge */
+.ai-gen-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(212,168,67,.08);border:1px solid var(--gold-dim);border-radius:20px;padding:4px 12px;font-size:.72rem;color:var(--gold);font-family:var(--font-mono);letter-spacing:.05em;}
+.ai-gen-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--gold);animation:pulse 1.4s ease infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
+</style>
+</head>
+<body>
+
+<!-- Nav — identical structure to index.html -->
+<nav class="nav">
+  <a href="index.html" class="nav-brand">Study<em>Mind</em></a>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">🏠 <span>Dashboard</span></a>
+    <a href="planner.html" class="nav-link active">📅 <span>Planner</span></a>
+    <a href="focus-detector.html" class="nav-link">👁 <span>Focus Detector</span></a>
+    <a href="admin.html" class="nav-link" id="admin-nav-link" style="display:none;">🛡 <span>Admin</span></a>
+  </div>
+  <div class="nav-right">
+    <div class="nav-time" id="clock">--:--</div>
+    <div class="user-chip">
+      <div class="user-avatar">?</div>
+      <span class="user-name">Student</span>
+      <div class="user-dropdown">
+        <a href="index.html">🏠 Dashboard</a>
+        <hr/>
+        <button onclick="switchAccount()">🔄 Switch Account</button>
+        <button class="logout-btn" onclick="logout()">🚪 Log Out</button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="container">
+
+    <!-- Page header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+      <div>
+        <h2 style="font-family:var(--font-display);font-size:1.4rem;color:var(--cream);margin-bottom:3px;">AI Study Planner <span style="font-size:.8rem;color:var(--muted);font-family:var(--font-body);font-weight:400;">— weekly schedule generator</span></h2>
+        <p style="font-size:.83rem;color:var(--muted);">Select your subjects, set your preferences, and get an intelligent weekly study plan instantly.</p>
+      </div>
+      <div class="ai-gen-badge">✦ Smart Schedule Engine</div>
+    </div>
+
+    <div class="planner-layout">
+
+      <!-- ── Left: Settings panel ── -->
+      <div class="settings-panel">
+
+        <div class="settings-section">
+          <div class="settings-label">Daily Study Hours</div>
+          <input class="field-input" type="number" value="4" min="1" max="12" id="hoursInput"/>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-label">Subjects — tap to toggle</div>
+          <div class="subject-toggles" id="subjectToggles"></div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-label">Upcoming Exams / Deadlines</div>
+          <input class="field-input" type="text" placeholder="e.g. Physics exam Friday, Math test Monday" id="examInput"/>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-label">Study Style</div>
+          <select class="field-input" id="styleInput">
+            <option>Balanced (mix of all subjects)</option>
+            <option>Exam-focused</option>
+            <option>Weak subjects first</option>
+            <option>Spaced repetition</option>
+          </select>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-label">Notes / Constraints</div>
+          <input class="field-input" type="text" placeholder="e.g. Free evenings only, coaching Mon/Wed" id="notesInput"/>
+        </div>
+
+        <div class="gen-btn-row">
+          <button class="btn btn-ghost" onclick="resetPlan()" style="flex:1;">↺ Reset</button>
+          <button class="btn btn-primary" id="genBtn" onclick="generatePlan()" style="flex:2;">✦ Generate Full Plan</button>
+        </div>
+      </div>
+
+      <!-- ── Right: Plan output ── -->
+      <div class="plan-panel" id="planPanel">
+        <div class="plan-header">
+          <div class="plan-title" id="planTitle">Weekly Study Plan</div>
+          <div class="plan-meta-badges">
+            <span class="plan-badge gold" id="hrsBadge">4 hrs/day</span>
+            <span class="plan-badge" id="modeBadge">Balanced</span>
+            <span class="plan-badge" id="subBadge">0 subjects</span>
+          </div>
+        </div>
+
+        <div class="plan-legend" id="planLegend" style="display:none;"></div>
+
+        <div id="planBody">
+          <div class="plan-empty">
+            <div class="plan-empty-icon">📅</div>
+            <div class="plan-empty-text">
+              Your personalised study plan will appear here.<br/>
+              <span id="emptyHint">Configure your settings and click <strong style="color:var(--gold);">Generate Full Plan</strong>.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="plan-stats" id="planStats" style="display:none;"></div>
+
+        <div class="plan-footer" id="planFooter" style="display:none;">
+          <div class="plan-footer-tip" id="planFooterTip"></div>
+          <span class="plan-saved-tag" id="savedTag">✓ SAVED TO DASHBOARD</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="app.js"></script>
+<script src="firebase-integration.js"></script>
+<script>
+// ── Auth & nav ────────────────────────────────────────────────────────────────
+const user = requireAuth();
+startClock(document.getElementById('clock'));
+renderUserChip();
+(function(){
+  const u = typeof getUser === 'function' ? getUser() : null;
+  if(u && u.isAdmin){ const el = document.getElementById('admin-nav-link'); if(el) el.style.display='flex'; }
+})();
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+const KEY_SUBJECTS = 'sm_subjects';
+const KEY_PLAN     = 'sm_planner_plan';
+
+// Colour palette — cycles for unlimited subjects
+const PALETTE = [
+  { color:'#d4a843', bg:'rgba(212,168,67,.10)', text:'#f0cc7a' },   // gold (matches app accent)
+  { color:'#5a9e6a', bg:'rgba(90,158,106,.10)', text:'#7ec48e' },
+  { color:'#4a7fb5', bg:'rgba(74,127,181,.10)', text:'#7aadd4' },
+  { color:'#a855f7', bg:'rgba(168,85,247,.10)', text:'#d8b4fe' },
+  { color:'#f59e0b', bg:'rgba(245,158,11,.10)', text:'#fcd34d' },
+  { color:'#10b981', bg:'rgba(16,185,129,.10)', text:'#6ee7b7' },
+  { color:'#ef4444', bg:'rgba(239,68,68,.10)',  text:'#fca5a5' },
+  { color:'#06b6d4', bg:'rgba(6,182,212,.10)',  text:'#67e8f9' },
+];
+
+const GENERIC_TOPICS = [
+  'Core Concepts','Problem Sets','Past Papers','Chapter Review',
+  'Formula Sheet','Practice Quiz','Concept Map','Flashcards',
+  'Key Theorems','Quick Revision','Exercise Sheet','Deep Dive'
+];
+
+const DAYS  = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+const TIMES = ['08:00','09:00','10:00','11:00','12:00','13:00'];
+const BREAK_IDX = 2;
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let subjects = [];
+let planGenerated = false;
+
+// ── Load subjects from localStorage (sm_subjects) ─────────────────────────────
+function loadSubjects(){
+  const stored = JSON.parse(localStorage.getItem(KEY_SUBJECTS) || '[]');
+  const saved  = JSON.parse(localStorage.getItem(KEY_PLAN)     || 'null');
+
+  subjects = stored.map((s, i) => {
+    const pal  = PALETTE[i % PALETTE.length];
+    const short = s.name.replace(/\s+/g,'').substring(0,5).toUpperCase();
+    const wasActive = saved && saved.activeSubjects
+      ? (saved.activeSubjects[s.name] !== undefined ? saved.activeSubjects[s.name] : true)
+      : true;
+    return {
+      name  : s.name,
+      short : short,
+      color : pal.color,
+      bg    : pal.bg,
+      text  : pal.text,
+      topics: s.topics || GENERIC_TOPICS,
+      active: wasActive
+    };
+  });
+}
+
+// ── Subject toggle UI ─────────────────────────────────────────────────────────
+function buildToggles(){
+  const el = document.getElementById('subjectToggles');
+  if(!subjects.length){
+    el.innerHTML = `<div class="no-subjects-msg">
+      No subjects found.<br/>
+      <a href="subjects.html">Add subjects →</a> then come back to plan.
+    </div>`;
+    return;
+  }
+  el.innerHTML = subjects.map((s,i) => `
+    <div class="subj-toggle ${s.active?'active':'inactive'}"
+         id="st-${i}" onclick="toggleSubject(${i})"
+         style="--s-color:${s.color};--s-bg:${s.bg};--s-text:${s.text};">
+      <div class="subj-dot"></div>
+      <div>
+        <div class="subj-name">${s.name}</div>
+        <div class="subj-hrs">${s.active ? calcHours()+'h / week' : 'excluded'}</div>
+      </div>
+      <div class="subj-check">✓</div>
+    </div>
+  `).join('');
+}
+
+function calcHours(){ return Math.round(28 / (subjects.filter(s=>s.active).length || 1)); }
+
+function toggleSubject(idx){
+  const on = subjects.filter(s=>s.active).length;
+  if(subjects[idx].active && on === 1){ showToast('At least one subject must stay active.'); return; }
+  subjects[idx].active = !subjects[idx].active;
+  buildToggles();
+  updateBadges();
+  if(planGenerated) buildGrid();
+}
+
+// ── Badges ────────────────────────────────────────────────────────────────────
+function updateBadges(){
+  const count = subjects.filter(s=>s.active).length;
+  const hrs   = document.getElementById('hoursInput').value || 4;
+  const style = document.getElementById('styleInput').value.split(' ')[0];
+  document.getElementById('hrsBadge').textContent  = hrs + ' hrs/day';
+  document.getElementById('modeBadge').textContent = style;
+  document.getElementById('subBadge').textContent  = count + ' subject' + (count!==1?'s':'');
+
+  // Date range
+  const now = new Date();
+  const mon = new Date(now); mon.setDate(now.getDate() - ((now.getDay()+6)%7));
+  const sun = new Date(mon); sun.setDate(mon.getDate()+6);
+  const fmt = d => d.toLocaleString('default',{month:'short',day:'numeric'});
+  document.getElementById('planTitle').textContent = `Weekly Study Plan — ${fmt(mon)} to ${fmt(sun)}`;
+}
+
+document.getElementById('hoursInput').addEventListener('input', ()=>{ updateBadges(); if(planGenerated) buildStats(); });
+document.getElementById('styleInput').addEventListener('change', ()=>{ updateBadges(); if(planGenerated) generatePlan(false); });
+
+// ── Generate plan ─────────────────────────────────────────────────────────────
+function generatePlan(showAnim=true){
+  if(!subjects.length){ showToast('Add subjects in the Subjects page first.'); return; }
+  const activeList = subjects.filter(s=>s.active);
+  if(!activeList.length){ showToast('Enable at least one subject.'); return; }
+
+  planGenerated = true;
+  const btn = document.getElementById('genBtn');
+  if(showAnim){ btn.disabled=true; btn.textContent='✦ Generating...'; }
+
+  setTimeout(()=>{
+    buildLegend();
+    buildGrid();
+    buildStats();
+    buildFooter();
+    updateBadges();
+    savePlan();
+    if(showAnim){
+      btn.disabled=false;
+      btn.textContent='✦ Generate Full Plan';
+      showToast('Plan generated & saved to Dashboard ✓');
+      flashSaved();
+    }
+  }, showAnim ? 650 : 0);
+}
+
+// ── Save to localStorage ──────────────────────────────────────────────────────
+function savePlan(){
+  const activeMap = {};
+  subjects.forEach(s=>{ activeMap[s.name]=s.active; });
+  const plan = {
+    generatedAt   : new Date().toISOString(),
+    hours         : document.getElementById('hoursInput').value,
+    style         : document.getElementById('styleInput').value,
+    exams         : document.getElementById('examInput').value,
+    notes         : document.getElementById('notesInput').value,
+    activeSubjects: activeMap,
+    subjectsMeta  : subjects.map(s=>({...s}))
+  };
+  localStorage.setItem(KEY_PLAN, JSON.stringify(plan));
+}
+
+function flashSaved(){
+  const el = document.getElementById('savedTag');
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),3500);
+}
+
+// ── Legend ────────────────────────────────────────────────────────────────────
+function buildLegend(){
+  const el = document.getElementById('planLegend');
+  el.style.display = 'flex';
+  el.innerHTML = '';
+  subjects.filter(s=>s.active).forEach(s=>{
+    el.innerHTML += `<div class="legend-pip"><div class="legend-dot" style="background:${s.color}"></div>${s.name}</div>`;
+  });
+  el.innerHTML += `
+    <div class="legend-pip"><div class="legend-dot" style="background:var(--gold-dim)"></div>Review</div>
+    <div class="legend-pip"><div class="legend-dot" style="background:var(--border)"></div>Break</div>
+  `;
+}
+
+// ── Grid ──────────────────────────────────────────────────────────────────────
+function seededShuffle(arr, seed){
+  const a=[...arr];
+  for(let i=a.length-1;i>0;i--){
+    seed=(seed*9301+49297)%233280;
+    const j=Math.floor((seed/233280)*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+function buildGrid(){
+  const activeList = subjects.filter(s=>s.active);
+  const seed = Date.now(); // fresh seed on each generate
+  const plan = [];
+
+  for(let d=0;d<7;d++){
+    const rota = seededShuffle(activeList, seed+d*1000);
+    const dayPlan=[]; let si=0;
+    for(let t=0;t<TIMES.length;t++){
+      if(t===BREAK_IDX){ dayPlan.push({type:'brk',sub:'BREAK',topic:''}); continue; }
+      if(t===TIMES.length-1){
+        const s=rota[si%rota.length];
+        dayPlan.push({type:'rev',sub:'REVIEW',topic:s.short+' wrap-up'}); si++; continue;
+      }
+      const s=rota[si%rota.length]; si++;
+      const topicIdx=(d+t)%s.topics.length;
+      dayPlan.push({type:'subj',sub:s.short,topic:s.topics[topicIdx],color:s.color,bg:s.bg,text:s.text});
+    }
+    plan.push(dayPlan);
+  }
+
+  const todayDow = (new Date().getDay()+6)%7;
+  const inner = document.createElement('div');
+  inner.className='plan-grid-inner';
+  inner.style.gridTemplateColumns=`54px repeat(7,1fr)`;
+
+  // Corner
+  const corner=document.createElement('div');
+  corner.className='pgrid-corner'; corner.textContent='TIME';
+  inner.appendChild(corner);
+
+  DAYS.forEach((d,i)=>{
+    const dh=document.createElement('div');
+    dh.className='pgrid-day'+(i===todayDow?' today':'');
+    dh.textContent=d; inner.appendChild(dh);
+  });
+
+  TIMES.forEach((t,ti)=>{
+    const tc=document.createElement('div');
+    tc.className='pgrid-time'; tc.textContent=t;
+    inner.appendChild(tc);
+
+    plan.forEach(day=>{
+      const slot=document.createElement('div');
+      slot.className='pgrid-slot';
+      const b=day[ti];
+      if(b){
+        const blk=document.createElement('div');
+        blk.className='pblock '+b.type;
+        if(b.type==='subj'){
+          blk.style.cssText=`background:${b.bg};border-left:3px solid ${b.color};color:${b.text};`;
+        }
+        blk.style.animationDelay=(ti*0.04+0.02)+'s';
+        blk.innerHTML=`<div class="bsub">${b.sub}</div>${b.topic?`<div class="btopic">${b.topic}</div>`:''}`;
+        slot.appendChild(blk);
+      }
+      inner.appendChild(slot);
+    });
+  });
+
+  const body=document.getElementById('planBody');
+  body.innerHTML='';
+  const wrap=document.createElement('div');
+  wrap.className='plan-grid-scroll';
+  wrap.appendChild(inner);
+  body.appendChild(wrap);
+}
+
+// ── Stats strip ───────────────────────────────────────────────────────────────
+function buildStats(){
+  const statsEl = document.getElementById('planStats');
+  statsEl.style.display='flex';
+  const activeList = subjects.filter(s=>s.active);
+  const hrsEach = calcHours();
+  statsEl.innerHTML = activeList.map(s=>`
+    <div class="pstat">
+      <div class="pstat-label">${s.name}</div>
+      <div class="pstat-val" style="color:${s.color}">${hrsEach}h</div>
+      <div class="pstat-sub">per week</div>
+    </div>
+  `).join('');
+}
+
+// ── Footer ────────────────────────────────────────────────────────────────────
+function buildFooter(){
+  const footer = document.getElementById('planFooter');
+  footer.style.display='flex';
+  const exams = document.getElementById('examInput').value;
+  document.getElementById('planFooterTip').innerHTML =
+    exams
+      ? `<strong>Exam note:</strong> ${exams} — schedule adjusted accordingly.`
+      : `Keep to your schedule consistently — every session compounds into mastery.`;
+}
+
+// ── Reset ─────────────────────────────────────────────────────────────────────
+function resetPlan(){
+  subjects.forEach(s=>s.active=true);
+  buildToggles(); updateBadges();
+  planGenerated=false;
+  document.getElementById('planBody').innerHTML=`
+    <div class="plan-empty">
+      <div class="plan-empty-icon">📅</div>
+      <div class="plan-empty-text">
+        Configure your settings and click <strong style="color:var(--gold);">Generate Full Plan</strong>.
+      </div>
+    </div>`;
+  document.getElementById('planLegend').style.display='none';
+  document.getElementById('planStats').style.display='none';
+  document.getElementById('planFooter').style.display='none';
+  localStorage.removeItem(KEY_PLAN);
+  showToast('Plan cleared.');
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadSubjects();
+buildToggles();
+updateBadges();
+
+// Restore previous plan if it exists
+const _saved = JSON.parse(localStorage.getItem(KEY_PLAN)||'null');
+if(_saved && subjects.length){
+  if(_saved.exams)  document.getElementById('examInput').value  = _saved.exams;
+  if(_saved.notes)  document.getElementById('notesInput').value = _saved.notes;
+  if(_saved.hours)  document.getElementById('hoursInput').value = _saved.hours;
+  if(_saved.style){
+    const sel=document.getElementById('styleInput');
+    for(let o of sel.options){ if(o.text===_saved.style||o.value===_saved.style){sel.value=o.value;break;} }
+  }
+  generatePlan(false);
+}
+</script>
+</body>
+</html>

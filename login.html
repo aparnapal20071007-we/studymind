@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>StudyMind — Welcome</title>
+<link rel="stylesheet" href="styles.css"/>
+<style>
+body{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg);}
+body::after{content:'◈';position:fixed;right:-40px;bottom:-60px;font-size:18rem;color:var(--gold);opacity:.03;pointer-events:none;z-index:0;}
+.auth-wrap{position:relative;z-index:1;width:100%;max-width:440px;padding:20px;}
+.auth-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:36px;box-shadow:var(--shadow);}
+.auth-brand{text-align:center;margin-bottom:28px;}
+.auth-brand h1{font-family:var(--font-display);font-size:2rem;color:var(--gold);margin-bottom:4px;}
+.auth-brand h1 em{font-style:italic;}
+.auth-brand p{font-size:.85rem;color:var(--muted);}
+.tab-row{display:flex;gap:0;margin-bottom:26px;background:var(--surface2);border-radius:var(--radius-sm);padding:3px;}
+.tab-btn{flex:1;padding:8px;border:none;background:transparent;font-family:var(--font-body);font-size:.84rem;color:var(--muted);cursor:pointer;border-radius:6px;transition:all .18s;}
+.tab-btn.active{background:var(--gold);color:#0d0b09;font-weight:600;}
+.auth-form{display:flex;flex-direction:column;gap:14px;}
+.edu-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.edu-opt{border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;cursor:pointer;text-align:center;font-size:.82rem;color:var(--muted);transition:all .18s;background:var(--surface2);}
+.edu-opt:hover{border-color:var(--gold-dim);color:var(--text);}
+.edu-opt.selected{border-color:var(--gold);color:var(--gold);background:rgba(212,168,67,.08);}
+.edu-opt .edu-icon{font-size:1.4rem;display:block;margin-bottom:3px;}
+.auth-btn{padding:11px;background:var(--gold);color:#0d0b09;border:none;border-radius:var(--radius-sm);font-family:var(--font-body);font-size:.9rem;font-weight:700;cursor:pointer;transition:all .18s;margin-top:4px;}
+.auth-btn:hover{background:var(--gold-light);transform:translateY(-1px);box-shadow:var(--shadow-gold);}
+.step-indicator{display:flex;gap:6px;justify-content:center;margin-bottom:18px;}
+.step-dot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:all .3s;}
+.step-dot.active{background:var(--gold);transform:scale(1.2);}
+.step-dot.done{background:var(--success);}
+.info-box{background:rgba(90,158,106,.08);border:1px solid rgba(90,158,106,.25);border-radius:var(--radius-sm);padding:12px 14px;font-size:.8rem;color:var(--success);line-height:1.6;}
+.pw-wrap{position:relative;}
+.pw-wrap input{padding-right:40px;}
+.pw-toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:.85rem;}
+.divider-or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:.78rem;margin:4px 0;}
+.divider-or::before,.divider-or::after{content:'';flex:1;height:1px;background:var(--border);}
+</style>
+</head>
+<body>
+<div class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <h1>Study<em>Mind</em></h1>
+      <p>Your intelligent academic companion</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tab-row">
+      <button class="tab-btn active" onclick="showTab('register')">Create Account</button>
+      <button class="tab-btn" onclick="showTab('login')">Sign In</button>
+    </div>
+
+    <!-- REGISTER -->
+    <div id="register-panel">
+      <div class="step-indicator">
+        <div class="step-dot active" id="sd1"></div>
+        <div class="step-dot" id="sd2"></div>
+        <div class="step-dot" id="sd3"></div>
+      </div>
+
+      <!-- Step 1: Education Level -->
+      <div id="step1">
+        <div class="auth-form">
+          <div style="font-family:var(--font-display);color:var(--cream);font-size:1.1rem;margin-bottom:2px;">What's your education level?</div>
+          <p style="font-size:.82rem;color:var(--muted);margin-bottom:8px;">We'll personalize your experience accordingly.</p>
+          <div class="edu-grid">
+            <div class="edu-opt" data-level="School" onclick="selectEdu(this)">
+              <span class="edu-icon">🏫</span>School
+            </div>
+            <div class="edu-opt" data-level="College" onclick="selectEdu(this)">
+              <span class="edu-icon">🎓</span>College
+            </div>
+            <div class="edu-opt" data-level="Pre-Graduate" onclick="selectEdu(this)">
+              <span class="edu-icon">📖</span>Pre-Graduate
+            </div>
+            <div class="edu-opt" data-level="Post-Graduate" onclick="selectEdu(this)">
+              <span class="edu-icon">🔬</span>Post-Graduate
+            </div>
+          </div>
+          <button class="auth-btn" onclick="goStep(2)">Continue →</button>
+        </div>
+      </div>
+
+      <!-- Step 2: Name & Email -->
+      <div id="step2" style="display:none;">
+        <div class="auth-form">
+          <div style="font-family:var(--font-display);color:var(--cream);font-size:1.1rem;margin-bottom:8px;">Tell us about yourself</div>
+          <div class="input-group">
+            <label>Full Name</label>
+            <input type="text" id="reg-name" placeholder="e.g. Arjun Sharma"/>
+          </div>
+          <div class="input-group">
+            <label>Email Address</label>
+            <input type="email" id="reg-email" placeholder="you@example.com"/>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:4px;">
+            <button class="auth-btn" style="background:var(--surface3);color:var(--text);flex:1;" onclick="goStep(1)">← Back</button>
+            <button class="auth-btn" style="flex:2;" onclick="goStep(3)">Continue →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Password -->
+      <div id="step3" style="display:none;">
+        <div class="auth-form">
+          <div style="font-family:var(--font-display);color:var(--cream);font-size:1.1rem;margin-bottom:8px;">Create a password</div>
+          <div class="input-group">
+            <label>Password</label>
+            <div class="pw-wrap">
+              <input type="password" id="reg-pw" placeholder="Min. 6 characters"/>
+              <button class="pw-toggle" onclick="togglePw('reg-pw')">👁</button>
+            </div>
+          </div>
+          <div class="input-group">
+            <label>Confirm Password</label>
+            <div class="pw-wrap">
+              <input type="password" id="reg-pw2" placeholder="Repeat password"/>
+              <button class="pw-toggle" onclick="togglePw('reg-pw2')">👁</button>
+            </div>
+          </div>
+          <div class="info-box">
+            🔒 Your data is stored locally in your browser. No information is sent to any server. You can export your data anytime.
+          </div>
+          <div style="display:flex;gap:8px;margin-top:4px;">
+            <button class="auth-btn" style="background:var(--surface3);color:var(--text);flex:1;" onclick="goStep(2)">← Back</button>
+            <button class="auth-btn" style="flex:2;" onclick="register()">Create Account ✓</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="login-panel" style="display:none;">
+      <div class="auth-form">
+        <div style="font-family:var(--font-display);color:var(--cream);font-size:1.1rem;margin-bottom:8px;">Welcome back!</div>
+        <div class="input-group">
+          <label>Email Address</label>
+          <input type="email" id="login-email" placeholder="you@example.com"/>
+        </div>
+        <div class="input-group">
+          <label>Password</label>
+          <div class="pw-wrap">
+            <input type="password" id="login-pw" placeholder="Your password"/>
+            <button class="pw-toggle" onclick="togglePw('login-pw')">👁</button>
+          </div>
+        </div>
+        <button class="auth-btn" onclick="login()">Sign In →</button>
+        <div class="divider-or">or</div>
+        <div id="stored-accounts" style="display:flex;flex-direction:column;gap:6px;"></div>
+      </div>
+    </div>
+  </div>
+  <p style="text-align:center;font-size:.76rem;color:var(--muted);margin-top:14px;">All data stored locally · No account sync</p>
+</div>
+
+<div id="toast-container"></div>
+<script src="app.js"></script>
+<script src="firebase-integration.js"></script>
+<script>
+let selectedLevel='';
+let currentStep=1;
+
+// Check if already logged in
+if(getUser()) location.href='index.html';
+
+function showTab(tab){
+  document.getElementById('register-panel').style.display=tab==='register'?'block':'none';
+  document.getElementById('login-panel').style.display=tab==='login'?'block':'none';
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',(tab==='register'&&i===0)||(tab==='login'&&i===1)));
+  if(tab==='login') renderStoredAccounts();
+}
+
+function selectEdu(el){
+  document.querySelectorAll('.edu-opt').forEach(e=>e.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedLevel=el.dataset.level;
+}
+
+function goStep(n){
+  if(n===2 && !selectedLevel){showToast('Please select your education level','error');return;}
+  if(n===3){
+    const name=document.getElementById('reg-name').value.trim();
+    const email=document.getElementById('reg-email').value.trim();
+    if(!name){showToast('Enter your name','error');return;}
+    if(!email||!email.includes('@')){showToast('Enter a valid email','error');return;}
+  }
+  currentStep=n;
+  [1,2,3].forEach(i=>{
+    document.getElementById('step'+i).style.display=i===n?'block':'none';
+    const dot=document.getElementById('sd'+i);
+    dot.classList.toggle('active',i===n);
+    dot.classList.toggle('done',i<n);
+  });
+}
+
+function register(){
+  const name=document.getElementById('reg-name').value.trim();
+  const email=document.getElementById('reg-email').value.trim();
+  const pw=document.getElementById('reg-pw').value;
+  const pw2=document.getElementById('reg-pw2').value;
+  if(pw.length<6){showToast('Password must be at least 6 characters','error');return;}
+  if(pw!==pw2){showToast('Passwords do not match','error');return;}
+  // Store all accounts
+  const accounts=Store.get('sm_accounts')||[];
+  if(accounts.find(a=>a.email===email)){showToast('Email already registered. Please sign in.','error');return;}
+  const user={id:uid(),name,email,level:selectedLevel,pw,created:new Date().toISOString()};
+  accounts.push(user);
+  Store.set('sm_accounts',accounts);
+  Store.set('sm_user',user);
+  showToast('Welcome to StudyMind, '+name+'!','success');
+  setTimeout(()=>location.href='index.html',800);
+}
+
+function login(){
+  const email=document.getElementById('login-email').value.trim();
+  const pw=document.getElementById('login-pw').value;
+  const accounts=Store.get('sm_accounts')||[];
+  const user=accounts.find(a=>a.email===email&&a.pw===pw);
+  if(!user){showToast('Invalid email or password','error');return;}
+  Store.set('sm_user',user);
+  showToast('Welcome back, '+user.name+'!','success');
+  setTimeout(()=>location.href='index.html',600);
+}
+
+function renderStoredAccounts(){
+  const accounts=Store.get('sm_accounts')||[];
+  const el=document.getElementById('stored-accounts');
+  if(!accounts.length){el.innerHTML='<p style="font-size:.78rem;color:var(--muted);text-align:center;">No accounts found. Create one above.</p>';return;}
+  el.innerHTML='<p style="font-size:.75rem;color:var(--muted);margin-bottom:4px;">Saved accounts:</p>'+
+    accounts.map(a=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;" onclick="quickLogin('${a.email}')">
+        <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--gold-dim),var(--gold));display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;color:#0d0b09;">${a.name.charAt(0).toUpperCase()}</div>
+        <div style="flex:1"><div style="font-size:.85rem;color:var(--text);">${a.name}</div><div style="font-size:.73rem;color:var(--muted);">${a.level} · ${a.email}</div></div>
+        <span style="font-size:.75rem;color:var(--gold);">→</span>
+      </div>
+    `).join('');
+}
+
+function quickLogin(email){
+  document.getElementById('login-email').value=email;
+  document.getElementById('login-pw').focus();
+}
+
+function togglePw(id){
+  const i=document.getElementById(id);
+  i.type=i.type==='password'?'text':'password';
+}
+</script>
+<script>
+(function(){const u=typeof getUser==='function'?getUser():null;if(u&&u.isAdmin){const el=document.getElementById('admin-nav-link');if(el)el.style.display='flex';}})();
+</script>
+</body>
+</html>

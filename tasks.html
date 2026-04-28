@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>StudyMind — Tasks</title>
+<link rel="stylesheet" href="styles.css"/>
+<style>
+.filters{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:20px;align-items:center;}
+.filter-btn{padding:5px 14px;border-radius:100px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:.79rem;font-family:var(--font-body);cursor:pointer;transition:all .15s;}
+.filter-btn:hover{color:var(--text);border-color:var(--gold-dim);}
+.filter-btn.active{color:var(--gold);border-color:var(--gold);background:rgba(212,168,67,.08);}
+.task-item{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;background:var(--surface);border-radius:var(--radius-sm);margin-bottom:7px;border:1px solid var(--border);transition:all .15s;}
+.task-item:hover{border-color:var(--gold-dim);}
+.task-item.distracted-item{background:rgba(192,80,58,.04);border-color:rgba(192,80,58,.2);}
+.check-btn{width:21px;height:21px;border-radius:50%;border:2px solid var(--border);cursor:pointer;background:transparent;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s;margin-top:1px;}
+.check-btn.done{background:var(--success);border-color:var(--success);}
+.check-btn.done::after{content:'✓';color:#fff;font-size:.66rem;font-weight:700;}
+.check-btn.distracted{background:rgba(192,80,58,.15);border-color:var(--danger);}
+.check-btn.distracted::after{content:'✕';color:var(--danger);font-size:.7rem;font-weight:700;}
+.task-content{flex:1;}
+.task-title{font-size:.88rem;color:var(--text);margin-bottom:3px;}
+.task-title.done{text-decoration:line-through;color:var(--muted);}
+.task-title.distracted{text-decoration:line-through;color:var(--danger);}
+.task-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.task-meta span{font-size:.73rem;color:var(--muted);}
+.task-actions{display:flex;gap:3px;opacity:0;transition:opacity .15s;}
+.task-item:hover .task-actions{opacity:1;}
+.p-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:6px;}
+.p-high{background:#c0503a;}.p-medium{background:#d4a843;}.p-low{background:#5a9e6a;}
+.add-bar{display:flex;gap:9px;margin-bottom:18px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 13px;align-items:center;transition:border-color .2s;}
+.add-bar:focus-within{border-color:var(--gold);}
+.add-input{flex:1;background:transparent;border:none;color:var(--text);font-size:.88rem;outline:none;padding:0;}
+.add-input::placeholder{color:var(--muted);}
+.distracted-banner{background:rgba(192,80,58,.08);border:1px solid rgba(192,80,58,.25);border-radius:var(--radius-sm);padding:10px 14px;font-size:.81rem;color:var(--danger);margin-bottom:16px;line-height:1.5;}
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="index.html" class="nav-brand">Study<em>Mind</em></a>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">🏠 <span>Dashboard</span></a>
+    <a href="planner.html" class="nav-link">📅 <span>Planner</span></a>
+    <a href="tasks.html" class="nav-link active">✅ <span>Tasks</span></a>
+    <a href="subjects.html" class="nav-link">📚 <span>Subjects</span></a>
+    <a href="pomodoro.html" class="nav-link">🍅 <span>Pomodoro</span></a>
+    <a href="notes.html" class="nav-link">📝 <span>Notes</span></a>
+    <a href="ai-assistant.html" class="nav-link">🤖 <span>AI Advisor</span></a>
+    <a href="focus-detector.html" class="nav-link">👁 <span>Focus Detector</span></a>
+    <a href="admin.html" class="nav-link" id="admin-nav-link" style="display:none;">🛡 <span>Admin</span></a>
+  </div>
+  <div class="nav-right">
+    <div class="nav-time" id="clock">--:--</div>
+    <div class="user-chip">
+      <div class="user-avatar">?</div><span class="user-name">Student</span>
+      <div class="user-dropdown">
+        <button onclick="switchAccount()">🔄 Switch Account</button>
+        <button class="logout-btn" onclick="logout()">🚪 Log Out</button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="container">
+    <div class="page-header">
+      <h1>Task <em>Manager</em></h1>
+      <div class="divider"></div>
+      <p>Tasks not completed by their due date are automatically marked as <span style="color:var(--danger);">distracted</span>.</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid-4" style="margin-bottom:22px;" id="task-stats"></div>
+
+    <!-- Distracted banner -->
+    <div id="distracted-banner" class="distracted-banner" style="display:none;"></div>
+
+    <!-- Quick add -->
+    <div class="add-bar">
+      <span>➕</span>
+      <input class="add-input" id="quick-title" placeholder="Add a task — press Enter to save…"/>
+      <select id="quick-subject" style="width:auto;padding:4px 8px;font-size:.78rem;">
+        <option value="">No subject</option>
+      </select>
+      <select id="quick-priority" style="width:auto;padding:4px 8px;font-size:.78rem;">
+        <option value="medium">🟡 Med</option>
+        <option value="high">🔴 High</option>
+        <option value="low">🟢 Low</option>
+      </select>
+      <input type="date" id="quick-date" style="width:auto;padding:4px 8px;font-size:.78rem;"/>
+      <button class="btn btn-primary btn-sm" onclick="quickAdd()">Add</button>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters">
+      <button class="filter-btn active" data-f="all">All</button>
+      <button class="filter-btn" data-f="today">📅 Today</button>
+      <button class="filter-btn" data-f="pending">⏳ Pending</button>
+      <button class="filter-btn" data-f="done">✅ Done</button>
+      <button class="filter-btn" data-f="distracted">❌ Distracted</button>
+      <button class="filter-btn" data-f="high">🔴 High Priority</button>
+      <div style="flex:1;"></div>
+      <select id="sort-sel" style="padding:4px 8px;font-size:.78rem;width:auto;">
+        <option value="date">By Date</option>
+        <option value="priority">By Priority</option>
+        <option value="subject">By Subject</option>
+        <option value="created">By Created</option>
+      </select>
+      <button class="btn btn-danger btn-sm" onclick="clearDone()">Clear Completed</button>
+    </div>
+
+    <div id="task-list"></div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="edit-modal" style="display:none;">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Edit Task</div>
+      <button class="btn btn-ghost btn-icon btn-sm" onclick="closeModal('edit-modal')">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:13px;">
+      <div class="input-group"><label>Title</label><input type="text" id="e-title"/></div>
+      <div class="input-group"><label>Notes</label><textarea id="e-notes" rows="3"></textarea></div>
+      <div class="form-row">
+        <div class="input-group" style="flex:1;min-width:110px;"><label>Subject</label><select id="e-subject"></select></div>
+        <div class="input-group" style="flex:1;min-width:100px;"><label>Priority</label>
+          <select id="e-priority"><option value="high">🔴 High</option><option value="medium">🟡 Medium</option><option value="low">🟢 Low</option></select>
+        </div>
+        <div class="input-group" style="flex:1;min-width:110px;"><label>Due Date</label><input type="date" id="e-date"/></div>
+      </div>
+      <button class="btn btn-primary" onclick="saveEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="app.js"></script>
+<script src="firebase-integration.js"></script>
+<script>
+requireAuth();
+startClock(document.getElementById('clock'));
+renderUserChip();
+document.getElementById('quick-date').value=today();
+
+let currentFilter='all';
+let editingId=null;
+
+function populateSubs(){
+  const subs=Store.get('sm_subjects')||[];
+  const opts='<option value="">No subject</option>'+subs.map(s=>`<option value="${s.name}">${s.name}</option>`).join('');
+  document.getElementById('quick-subject').innerHTML=opts;
+  const esel=document.getElementById('e-subject');
+  if(esel) esel.innerHTML=opts;
+}
+populateSubs();
+
+function getTasks(){
+  let tasks=Store.get('sm_tasks')||[];
+  const sort=document.getElementById('sort-sel').value;
+  const prio={high:0,medium:1,low:2};
+  if(sort==='priority') tasks.sort((a,b)=>prio[a.priority]-prio[b.priority]);
+  else if(sort==='subject') tasks.sort((a,b)=>(a.subject||'').localeCompare(b.subject||''));
+  else if(sort==='created') tasks.sort((a,b)=>b.created.localeCompare(a.created));
+  else tasks.sort((a,b)=>(a.date||'9999').localeCompare(b.date||'9999'));
+  if(currentFilter==='today') return tasks.filter(t=>t.date===today());
+  if(currentFilter==='pending') return tasks.filter(t=>!t.done);
+  if(currentFilter==='done') return tasks.filter(t=>t.done&&!t.distracted);
+  if(currentFilter==='distracted') return tasks.filter(t=>t.distracted);
+  if(currentFilter==='high') return tasks.filter(t=>t.priority==='high'&&!t.done);
+  return tasks;
+}
+
+function renderStats(){
+  const all=Store.get('sm_tasks')||[];
+  const done=all.filter(t=>t.done&&!t.distracted).length;
+  const dist=all.filter(t=>t.distracted).length;
+  const high=all.filter(t=>t.priority==='high'&&!t.done&&!t.distracted).length;
+  const todayT=all.filter(t=>t.date===today());
+  document.getElementById('task-stats').innerHTML=`
+    <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value">${all.length}</div></div>
+    <div class="stat-card"><div class="stat-label">Completed</div><div class="stat-value" style="color:var(--success)">${done}</div></div>
+    <div class="stat-card"><div class="stat-label">Distracted</div><div class="stat-value" style="color:var(--danger)">${dist}</div><div class="stat-sub">auto-crossed overdue</div></div>
+    <div class="stat-card"><div class="stat-label">High Priority</div><div class="stat-value" style="color:var(--gold)">${high}</div></div>
+  `;
+  // Distracted banner
+  const banner=document.getElementById('distracted-banner');
+  const recent=all.filter(t=>t.distracted&&t.autoCrossed);
+  if(recent.length){
+    banner.style.display='block';
+    banner.innerHTML=`⚠️ <strong>${recent.length} task${recent.length>1?'s':''}</strong> were automatically marked as <strong>distracted</strong> because they were not completed by their due date: ${recent.map(t=>`"${t.title}"`).join(', ')}.`;
+  }else banner.style.display='none';
+}
+
+function renderTasks(){
+  const tasks=getTasks();
+  const el=document.getElementById('task-list');
+  renderStats();
+  if(!tasks.length){el.innerHTML=`<div class="empty-state"><p>No tasks here. Add one above!</p></div>`;return;}
+  const prioClass={high:'p-high',medium:'p-medium',low:'p-low'};
+  const prioLabel={high:'🔴 High',medium:'🟡 Medium',low:'🟢 Low'};
+  el.innerHTML=tasks.map(t=>`
+    <div class="task-item ${t.distracted?'distracted-item':''}">
+      <div class="p-dot ${prioClass[t.priority||'medium']}"></div>
+      <button class="check-btn ${t.distracted?'distracted':t.done?'done':''}" onclick="toggleDone('${t.id}')"></button>
+      <div class="task-content">
+        <div class="task-title ${t.distracted?'distracted':t.done?'done':''}">${t.title}${t.distracted?` <span style="font-size:.72rem;background:rgba(192,80,58,.12);color:var(--danger);padding:1px 7px;border-radius:100px;">distracted</span>`:''}</div>
+        <div class="task-meta">
+          ${t.subject?`<span class="badge badge-muted">${t.subject}</span>`:''}
+          ${t.date?`<span>📅 ${formatDate(t.date)}</span>`:''}
+          <span>${prioLabel[t.priority||'medium']}</span>
+          ${t.notes?`<span style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.notes}</span>`:''}
+        </div>
+      </div>
+      <div class="task-actions">
+        <button class="btn btn-ghost btn-icon btn-sm" onclick="editTask('${t.id}')">✏️</button>
+        <button class="btn btn-danger btn-icon btn-sm" onclick="deleteTask('${t.id}')">🗑</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function quickAdd(){
+  const title=document.getElementById('quick-title').value.trim();
+  if(!title){showToast('Enter a task title','error');return;}
+  Store.push('sm_tasks',{id:uid(),title,subject:document.getElementById('quick-subject').value,priority:document.getElementById('quick-priority').value,date:document.getElementById('quick-date').value,done:false,distracted:false,autoCrossed:false,notes:'',created:new Date().toISOString()});
+  document.getElementById('quick-title').value='';
+  showToast('Task added!','success');
+  renderTasks();
+}
+document.getElementById('quick-title').addEventListener('keydown',e=>{if(e.key==='Enter')quickAdd();});
+
+function toggleDone(id){
+  const tasks=Store.get('sm_tasks')||[];
+  const t=tasks.find(x=>x.id===id);
+  if(t&&!t.distracted){t.done=!t.done;Store.set('sm_tasks',tasks);renderTasks();}
+}
+
+function deleteTask(id){if(!confirm('Delete this task?'))return;Store.set('sm_tasks',(Store.get('sm_tasks')||[]).filter(t=>t.id!==id));showToast('Deleted','info');renderTasks();}
+
+function editTask(id){
+  const t=(Store.get('sm_tasks')||[]).find(x=>x.id===id);if(!t)return;
+  editingId=id;
+  document.getElementById('e-title').value=t.title;
+  document.getElementById('e-notes').value=t.notes||'';
+  document.getElementById('e-subject').value=t.subject||'';
+  document.getElementById('e-priority').value=t.priority||'medium';
+  document.getElementById('e-date').value=t.date||'';
+  openModal('edit-modal');
+}
+function saveEdit(){
+  const patch={title:document.getElementById('e-title').value.trim(),notes:document.getElementById('e-notes').value.trim(),subject:document.getElementById('e-subject').value,priority:document.getElementById('e-priority').value,date:document.getElementById('e-date').value};
+  if(!patch.title){showToast('Title cannot be empty','error');return;}
+  Store.update('sm_tasks',editingId,patch);
+  closeModal('edit-modal');showToast('Updated!','success');renderTasks();
+}
+function clearDone(){if(!confirm('Remove all completed & distracted tasks?'))return;Store.set('sm_tasks',(Store.get('sm_tasks')||[]).filter(t=>!t.done));showToast('Cleared','info');renderTasks();}
+
+document.querySelectorAll('.filter-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');currentFilter=btn.dataset.f;renderTasks();});
+});
+document.getElementById('sort-sel').addEventListener('change',renderTasks);
+renderTasks();
+</script>
+<script>
+(function(){const u=typeof getUser==='function'?getUser():null;if(u&&u.isAdmin){const el=document.getElementById('admin-nav-link');if(el)el.style.display='flex';}})();
+</script>
+</body>
+</html>

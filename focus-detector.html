@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>StudyMind — AI Focus Detector</title>
+<link rel="stylesheet" href="styles.css"/>
+<style>
+/* Override focus detector styles with neon green theme */
+:root {
+  --accent:#39ff14;--accent2:#6aff4a;
+  --accent-dim:rgba(57,255,20,0.10);--accent-dim2:rgba(57,255,20,0.05);
+  --red:#ff6b6b;--red-dim:rgba(255,107,107,0.12);
+  --blue:#5b9cf6;--blue-dim:rgba(91,156,246,0.12);
+  --orange:#ffb347;--orange-dim:rgba(255,179,71,0.12);
+}
+
+/* Focus page layout */
+.focus-page{max-width:1100px;margin:0 auto;padding:28px 26px 40px;}
+.focus-hero{text-align:center;padding:24px 0 28px;}
+.hero-orb{
+  width:68px;height:68px;border-radius:50%;
+  background:var(--accent-dim);border:1px solid rgba(57,255,20,.4);
+  display:flex;align-items:center;justify-content:center;
+  font-size:30px;margin:0 auto 16px;position:relative;
+}
+.hero-orb::after{
+  content:'';position:absolute;width:11px;height:11px;border-radius:50%;
+  background:var(--accent);bottom:3px;right:3px;animation:pulse2 2s infinite;
+  box-shadow:0 0 8px var(--accent);
+}
+@keyframes pulse2{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(.8);}}
+.focus-hero h1{font-family:var(--font-display);font-size:1.9rem;color:var(--cream);margin-bottom:6px;}
+.focus-hero h1 em{color:var(--accent);font-style:italic;}
+.focus-hero p{font-size:.88rem;color:var(--muted);max-width:480px;margin:0 auto;}
+.tech-chips{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:12px;}
+.tech-chip{font-size:.72rem;font-weight:500;padding:3px 10px;border-radius:20px;border:1px solid var(--border);color:var(--muted);background:var(--surface2);}
+
+.detector-layout{display:grid;grid-template-columns:1fr 290px;gap:16px;}
+@media(max-width:820px){.detector-layout{grid-template-columns:1fr;}}
+
+/* Camera card */
+.cam-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+.cam-header{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--border);background:var(--surface2);}
+.cam-title{font-size:.86rem;font-weight:600;display:flex;align-items:center;gap:8px;color:var(--text);}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:background .3s;}
+.status-dot.active{background:var(--accent);animation:pulse2 2s infinite;box-shadow:0 0 6px var(--accent);}
+.status-dot.warning{background:var(--orange);animation:pulse2 1.5s infinite;}
+.status-dot.danger{background:var(--red);animation:pulse2 1s infinite;}
+.cam-status-label{font-size:.73rem;color:var(--muted);}
+
+.cam-viewport{position:relative;background:#000;aspect-ratio:16/9;overflow:hidden;}
+.cam-video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1);display:block;}
+.cam-overlay{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:12px;
+  background:rgba(9,13,9,.88);transition:opacity .3s;
+}
+.cam-overlay.hidden{opacity:0;pointer-events:none;}
+.cam-placeholder-icon{font-size:42px;opacity:.4;}
+.cam-placeholder-text{font-size:.82rem;color:var(--muted);text-align:center;max-width:260px;line-height:1.6;}
+
+.cam-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;transform:scaleX(-1);}
+.focus-box{position:absolute;border:2px solid var(--accent);border-radius:8px;transition:all .3s;pointer-events:none;box-shadow:0 0 10px rgba(57,255,20,.25);display:none;}
+.focus-box.visible{display:block;}
+.focus-box.warning{border-color:var(--orange);box-shadow:0 0 10px var(--orange-dim);}
+.focus-box.danger{border-color:var(--red);box-shadow:0 0 10px var(--red-dim);}
+.cam-hud{position:absolute;top:10px;left:10px;right:10px;display:flex;justify-content:space-between;align-items:flex-start;pointer-events:none;}
+.hud-badge{font-size:.72rem;font-weight:600;padding:4px 10px;border-radius:20px;backdrop-filter:blur(8px);background:rgba(9,13,9,.75);border:1px solid var(--border);color:var(--text);display:flex;align-items:center;gap:6px;}
+.hud-badge .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse2 2s infinite;box-shadow:0 0 4px var(--accent);}
+.hud-confidence{font-size:.72rem;padding:4px 10px;border-radius:20px;backdrop-filter:blur(8px);background:rgba(9,13,9,.75);border:1px solid var(--border);color:var(--muted);}
+.alert-flash{position:absolute;inset:0;pointer-events:none;border:3px solid transparent;transition:border-color .2s;}
+.alert-flash.alert{border-color:var(--red);animation:flashBorder .6s ease infinite;}
+@keyframes flashBorder{0%,100%{border-color:var(--red);}50%{border-color:transparent;}}
+
+.cam-footer{padding:12px 18px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--surface2);}
+.btn-accent{background:var(--accent);color:#090d09;border-color:var(--accent);font-weight:700;}
+.btn-accent:hover{background:var(--accent2);border-color:var(--accent2);color:#090d09;box-shadow:0 0 16px rgba(57,255,20,.35);}
+.btn-fd{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:var(--radius-sm);font-family:var(--font-body);font-size:.82rem;font-weight:500;border:1px solid var(--border);background:var(--surface3);color:var(--muted);transition:all .15s;}
+.btn-fd:hover{background:var(--surface2);color:var(--text);}
+.btn-fd-danger{border-color:var(--red);color:var(--red);background:var(--red-dim);}
+.btn-fd-danger:hover{background:rgba(255,107,107,.2);}
+.denied-banner{background:var(--red-dim);border:1px solid rgba(255,107,107,.3);border-radius:var(--radius-sm);padding:10px 14px;font-size:.82rem;color:var(--red);display:none;align-items:center;gap:10px;margin:10px 18px;}
+.denied-banner.show{display:flex;}
+
+/* Side panel */
+.side-col{display:flex;flex-direction:column;gap:14px;}
+.fd-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;}
+.fd-card-title{font-size:.84rem;font-weight:600;color:var(--cream);display:flex;align-items:center;gap:8px;margin-bottom:14px;}
+
+/* Focus meter */
+.focus-meter-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;}
+.meter-ring{width:100px;height:100px;position:relative;}
+.meter-ring svg{transform:rotate(-90deg);}
+.meter-val{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.meter-number{font-family:var(--font-display);font-size:28px;color:var(--accent);line-height:1;}
+.meter-label{font-size:.68rem;color:var(--muted);}
+.focus-state-badge{font-size:.82rem;font-weight:600;padding:4px 14px;border-radius:20px;background:var(--accent-dim);border:1px solid rgba(57,255,20,.28);color:var(--accent);display:inline-flex;align-items:center;gap:6px;}
+.focus-state-badge.unfocused{background:var(--red-dim);border-color:rgba(255,107,107,.3);color:var(--red);}
+.focus-state-badge.distracted{background:var(--orange-dim);border-color:rgba(255,179,71,.3);color:var(--orange);}
+
+/* Posture rows */
+.posture-list{display:flex;flex-direction:column;gap:7px;}
+.posture-row{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:var(--radius-sm);background:var(--surface2);border:1px solid var(--border);font-size:.79rem;}
+.posture-icon{font-size:.88rem;width:18px;text-align:center;}
+.posture-label{flex:1;color:var(--muted);}
+.posture-indicator{font-size:.68rem;font-weight:700;padding:2px 7px;border-radius:10px;}
+.ind-good{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(57,255,20,.2);}
+.ind-warn{background:var(--orange-dim);color:var(--orange);border:1px solid rgba(255,179,71,.2);}
+.ind-bad{background:var(--red-dim);color:var(--red);border:1px solid rgba(255,107,107,.2);}
+.ind-idle{background:var(--surface3);color:var(--muted);border:1px solid var(--border);}
+
+/* Stat grid */
+.stat-grid-fd{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.stat-mini{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;}
+.stat-mini .val{font-family:var(--font-display);font-size:1.4rem;color:var(--text);line-height:1;}
+.stat-mini .val.accent{color:var(--accent);}
+.stat-mini .val.orange{color:var(--orange);}
+.stat-mini .val.red{color:var(--red);}
+.stat-mini .val.blue{color:var(--blue);}
+.stat-mini .lbl{font-size:.68rem;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.05em;}
+
+/* Alert log */
+.alert-log{display:flex;flex-direction:column;gap:5px;max-height:180px;overflow-y:auto;}
+.alert-entry{font-size:.77rem;padding:6px 9px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;gap:7px;color:var(--muted);}
+.alert-entry .ae-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.alert-entry .ae-time{color:var(--muted);flex-shrink:0;font-size:.68rem;margin-left:auto;font-family:var(--font-mono);}
+.ae-focus .ae-dot{background:var(--accent);}
+.ae-posture .ae-dot{background:var(--orange);}
+.ae-distract .ae-dot{background:var(--red);}
+.ae-empty{color:var(--muted);text-align:center;padding:12px 0;font-style:italic;font-size:.78rem;}
+
+/* How it works */
+.how-section{margin-top:24px;}
+.how-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+@media(max-width:640px){.how-grid{grid-template-columns:1fr;}}
+.how-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;text-align:center;}
+.how-icon{font-size:1.6rem;margin-bottom:8px;}
+.how-title{font-size:.86rem;font-weight:600;margin-bottom:4px;color:var(--cream);}
+.how-desc{font-size:.77rem;color:var(--muted);line-height:1.6;}
+
+/* Permission modal */
+.fd-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:1000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;backdrop-filter:blur(4px);}
+.fd-modal-overlay.open{opacity:1;pointer-events:all;}
+.fd-modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:30px;width:380px;max-width:90vw;transform:translateY(20px);transition:transform .2s;text-align:center;}
+.fd-modal-overlay.open .fd-modal{transform:translateY(0);}
+.fd-modal-icon{font-size:2.6rem;margin-bottom:12px;}
+.fd-modal-title{font-family:var(--font-display);font-size:1.3rem;color:var(--cream);margin-bottom:8px;}
+.fd-modal-desc{font-size:.83rem;color:var(--muted);margin-bottom:20px;line-height:1.7;}
+.fd-modal-btns{display:flex;gap:8px;justify-content:center;}
+
+/* Alert banner */
+.alert-sound-indicator{
+  position:fixed;top:80px;left:50%;transform:translateX(-50%) translateY(-80px);
+  background:var(--red);color:#fff;font-size:.82rem;font-weight:600;
+  padding:8px 20px;border-radius:24px;
+  display:flex;align-items:center;gap:8px;z-index:3000;
+  transition:transform .35s cubic-bezier(.34,1.56,.64,1);pointer-events:none;
+}
+.alert-sound-indicator.show{transform:translateX(-50%) translateY(0);}
+
+/* Model progress */
+.model-progress{height:3px;background:var(--surface3);border-radius:3px;overflow:hidden;margin-top:10px;display:none;width:200px;}
+.model-progress.show{display:block;}
+.model-progress-fill{height:100%;background:var(--accent);border-radius:3px;width:0%;transition:width .4s ease;box-shadow:0 0 6px var(--accent);}
+.session-timer{font-family:var(--font-mono);font-size:.82rem;color:var(--muted);}
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="index.html" class="nav-brand">Study<em>Mind</em></a>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">🏠 <span>Dashboard</span></a>
+    <a href="planner.html" class="nav-link">📅 <span>Planner</span></a>
+    <a href="tasks.html" class="nav-link">✅ <span>Tasks</span></a>
+    <a href="subjects.html" class="nav-link">📚 <span>Subjects</span></a>
+    <a href="pomodoro.html" class="nav-link">🍅 <span>Pomodoro</span></a>
+    <a href="notes.html" class="nav-link">📝 <span>Notes</span></a>
+    <a href="ai-assistant.html" class="nav-link">🤖 <span>AI Advisor</span></a>
+    <a href="focus-detector.html" class="nav-link active">👁 <span>Focus Detector</span></a>
+    <a href="admin.html" class="nav-link" id="admin-nav-link" style="display:none;">🛡 <span>Admin</span></a>
+  </div>
+  <div class="nav-right">
+    <div class="nav-time" id="clock">--:--</div>
+    <div class="user-chip">
+      <div class="user-avatar">?</div><span class="user-name">Student</span>
+      <div class="user-dropdown">
+        <button onclick="switchAccount()">🔄 Switch Account</button>
+        <button class="logout-btn" onclick="logout()">🚪 Log Out</button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="focus-page">
+    <div class="focus-hero">
+      <div class="hero-orb">🧠</div>
+      <h1><em>AI</em> Focus Detector</h1>
+      <p>Webcam-powered real-time monitoring of your posture, gaze, and focus state — keeping you in the zone while you study.</p>
+      <div class="tech-chips">
+        <span class="tech-chip">TensorFlow.js</span>
+        <span class="tech-chip">BlazeFace</span>
+        <span class="tech-chip">Real-time AI</span>
+        <span class="tech-chip">100% Browser-side</span>
+      </div>
+    </div>
+
+    <div class="detector-layout">
+
+      <!-- Camera Card -->
+      <div class="cam-card">
+        <div class="cam-header">
+          <div class="cam-title">
+            <span id="status-dot" class="status-dot"></span>
+            Live Camera Feed
+            <span id="cam-status-label" class="cam-status-label">— Not started</span>
+          </div>
+          <span id="session-timer" class="session-timer" style="display:none">00:00</span>
+        </div>
+
+        <div class="cam-viewport">
+          <video id="cam-video" class="cam-video" autoplay muted playsinline></video>
+          <canvas id="cam-canvas" class="cam-canvas"></canvas>
+          <div id="focus-box" class="focus-box"></div>
+          <div id="alert-flash" class="alert-flash"></div>
+          <div class="cam-hud" id="cam-hud" style="display:none;">
+            <div class="hud-badge"><span class="dot"></span><span id="hud-state">Focused</span></div>
+            <div class="hud-confidence" id="hud-conf">Score: —</div>
+          </div>
+          <div class="cam-overlay" id="cam-overlay">
+            <div class="cam-placeholder-icon">📷</div>
+            <div class="cam-placeholder-text">Click <strong style="color:var(--accent)">Start Detection</strong> to activate your webcam and begin AI-powered focus monitoring.</div>
+            <div class="model-progress" id="model-progress">
+              <div class="model-progress-fill" id="model-progress-fill"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="cam-footer">
+          <button class="btn-fd btn-accent" id="btn-start" onclick="startDetection()">▶ Start Detection</button>
+          <button class="btn-fd btn-fd-danger" id="btn-stop" onclick="stopDetection()" style="display:none">⏹ Stop</button>
+          <button class="btn-fd" id="btn-reset" onclick="resetSession()" style="display:none">↺ Reset</button>
+          <div style="flex:1;"></div>
+          <label style="display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--muted);">
+            <input type="checkbox" id="toggle-sound" style="accent-color:var(--accent);width:13px;height:13px;" checked>
+            Sound
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--muted);">
+            <input type="checkbox" id="toggle-landmarks" style="accent-color:var(--accent);width:13px;height:13px;" checked>
+            Landmarks
+          </label>
+        </div>
+        <div class="denied-banner" id="denied-banner">
+          ⚠ Camera access denied. Please allow webcam permissions and reload.
+        </div>
+      </div>
+
+      <!-- Side Panel -->
+      <div class="side-col">
+
+        <div class="fd-card">
+          <div class="fd-card-title">🎯 Focus Score</div>
+          <div class="focus-meter-wrap">
+            <div class="meter-ring">
+              <svg width="100" height="100" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(57,255,20,.08)" stroke-width="7"/>
+                <circle id="meter-arc" cx="50" cy="50" r="42" fill="none"
+                  stroke="#39ff14" stroke-width="7"
+                  stroke-dasharray="264" stroke-dashoffset="264"
+                  stroke-linecap="round"
+                  style="transition:stroke-dashoffset .6s ease,stroke .4s ease;filter:drop-shadow(0 0 6px #39ff14);"/>
+              </svg>
+              <div class="meter-val">
+                <div class="meter-number" id="meter-number">—</div>
+                <div class="meter-label">/ 100</div>
+              </div>
+            </div>
+            <div class="focus-state-badge" id="focus-state-badge">⏸ Idle</div>
+          </div>
+        </div>
+
+        <div class="fd-card">
+          <div class="fd-card-title">🧍 Posture & Gaze</div>
+          <div class="posture-list">
+            <div class="posture-row">
+              <span class="posture-icon">👁</span>
+              <span class="posture-label">Gaze on screen</span>
+              <span class="posture-indicator ind-idle" id="ind-gaze">Idle</span>
+            </div>
+            <div class="posture-row">
+              <span class="posture-icon">🙂</span>
+              <span class="posture-label">Face detected</span>
+              <span class="posture-indicator ind-idle" id="ind-face">Idle</span>
+            </div>
+            <div class="posture-row">
+              <span class="posture-icon">📐</span>
+              <span class="posture-label">Head angle</span>
+              <span class="posture-indicator ind-idle" id="ind-head">Idle</span>
+            </div>
+            <div class="posture-row">
+              <span class="posture-icon">🧎</span>
+              <span class="posture-label">Posture upright</span>
+              <span class="posture-indicator ind-idle" id="ind-posture">Idle</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="fd-card">
+          <div class="fd-card-title">📊 Session Stats</div>
+          <div class="stat-grid-fd">
+            <div class="stat-mini"><div class="val accent" id="stat-focus-pct">—</div><div class="lbl">Focus %</div></div>
+            <div class="stat-mini"><div class="val orange" id="stat-alerts">0</div><div class="lbl">Alerts</div></div>
+            <div class="stat-mini"><div class="val blue" id="stat-time">0m</div><div class="lbl">Session</div></div>
+            <div class="stat-mini"><div class="val red" id="stat-away">0s</div><div class="lbl">Time Away</div></div>
+          </div>
+        </div>
+
+        <div class="fd-card">
+          <div class="fd-card-title">🔔 Alert Log</div>
+          <div class="alert-log" id="alert-log">
+            <div class="ae-empty">No alerts yet. Start detection to begin.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="how-section">
+      <div class="card-title" style="margin-bottom:14px;">How It Works</div>
+      <div class="how-grid">
+        <div class="how-card">
+          <div class="how-icon">📡</div>
+          <div class="how-title">Face Detection</div>
+          <div class="how-desc">BlazeFace model detects your face in real-time, tracking presence and position to determine if you're at your desk.</div>
+        </div>
+        <div class="how-card">
+          <div class="how-icon">🔬</div>
+          <div class="how-title">Gaze & Posture Analysis</div>
+          <div class="how-desc">Analyzes head angle, tilt, and gaze direction frame-by-frame to detect slouching and off-screen attention.</div>
+        </div>
+        <div class="how-card">
+          <div class="how-icon">🤖</div>
+          <div class="how-title">Focus Classification</div>
+          <div class="how-desc">Classifies your current state as Focused, Distracted, or Away — with real-time alerts to pull you back.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Permission Modal -->
+<div class="fd-modal-overlay" id="permission-modal">
+  <div class="fd-modal">
+    <div class="fd-modal-icon">📷</div>
+    <div class="fd-modal-title">Allow Camera Access</div>
+    <div class="fd-modal-desc">StudyMind AI Focus Detector needs your webcam to monitor focus and posture. <strong style="color:var(--cream)">All processing happens entirely in your browser</strong> — no video is ever uploaded or stored.</div>
+    <div class="fd-modal-btns">
+      <button class="btn-fd" onclick="closePermissionModal()">Cancel</button>
+      <button class="btn-fd btn-accent" onclick="grantCamera()">Allow Camera ›</button>
+    </div>
+  </div>
+</div>
+
+<div class="alert-sound-indicator" id="alert-banner">⚠ Focus Alert! Look at your screen.</div>
+<div id="toast-container"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface@0.0.7/dist/blazeface.min.js"></script>
+<script src="app.js"></script>
+<script src="firebase-integration.js"></script>
+<script>
+requireAuth();startClock(document.getElementById('clock'));renderUserChip();
+if(isAdmin()) document.getElementById('admin-nav-link').style.display='flex';
+
+// State
+let stream=null,blazeModel=null,detecting=false,animFrame=null;
+let sessionStart=null,timerInterval=null;
+let totalFrames=0,focusedFrames=0,alertCount=0,awaySeconds=0,awayFrames=0;
+let lastAlertTime=0,alertCooldown=8000;
+let currentFocusScore=0,smoothedScore=0,consecutiveAwayFrames=0;
+
+const video=document.getElementById('cam-video');
+const canvas=document.getElementById('cam-canvas');
+const ctx=canvas.getContext('2d');
+const overlay=document.getElementById('cam-overlay');
+const camHud=document.getElementById('cam-hud');
+const focusBox=document.getElementById('focus-box');
+const alertFlash=document.getElementById('alert-flash');
+
+function startDetection(){document.getElementById('permission-modal').classList.add('open');}
+function closePermissionModal(){document.getElementById('permission-modal').classList.remove('open');}
+async function grantCamera(){closePermissionModal();await initCamera();}
+
+async function initCamera(){
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{width:640,height:360,facingMode:'user'},audio:false});
+    video.srcObject=stream;
+    await new Promise(r=>video.onloadedmetadata=r);
+    video.play();
+    showToast('📷 Camera connected','success');
+    setStatus('active','Loading AI model…');
+    document.getElementById('model-progress').classList.add('show');
+    await loadModel();
+    document.getElementById('model-progress').classList.remove('show');
+    beginSession();
+  }catch(e){
+    if(e.name==='NotAllowedError'||e.name==='PermissionDeniedError'){
+      document.getElementById('denied-banner').classList.add('show');
+      showToast('Camera access denied','error');
+    }else{showToast('Could not access camera: '+e.message,'error');}
+    setStatus('','Error');
+  }
+}
+
+async function loadModel(){
+  setProgress(20);await tf.ready();setProgress(50);
+  blazeModel=await blazeface.load();setProgress(100);
+  await new Promise(r=>setTimeout(r,300));
+  showToast('🤖 AI model ready','success');
+}
+function setProgress(p){document.getElementById('model-progress-fill').style.width=p+'%';}
+
+function beginSession(){
+  detecting=true;sessionStart=Date.now();
+  totalFrames=0;focusedFrames=0;alertCount=0;awaySeconds=0;awayFrames=0;
+  smoothedScore=0;consecutiveAwayFrames=0;
+  overlay.classList.add('hidden');camHud.style.display='flex';
+  document.getElementById('btn-start').style.display='none';
+  document.getElementById('btn-stop').style.display='inline-flex';
+  document.getElementById('btn-reset').style.display='inline-flex';
+  document.getElementById('session-timer').style.display='block';
+  setStatus('active','Monitoring…');startTimer();detectLoop();
+  document.getElementById('alert-log').innerHTML='';
+  addLogEntry('Session started','ae-focus');
+}
+
+function stopDetection(){
+  detecting=false;cancelAnimationFrame(animFrame);clearInterval(timerInterval);
+  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
+  overlay.classList.remove('hidden');camHud.style.display='none';
+  focusBox.classList.remove('visible');alertFlash.classList.remove('alert');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  document.getElementById('btn-start').style.display='inline-flex';
+  document.getElementById('btn-stop').style.display='none';
+  document.getElementById('btn-reset').style.display='none';
+  document.getElementById('session-timer').style.display='none';
+  setStatus('','Stopped');
+  ['ind-gaze','ind-face','ind-head','ind-posture'].forEach(id=>setIndicator(id,'Idle','ind-idle'));
+  addLogEntry('Session ended','ae-focus');showToast('Session ended. Great work! 🎉','success');
+}
+
+function resetSession(){
+  if(!detecting)return;
+  totalFrames=0;focusedFrames=0;alertCount=0;awaySeconds=0;awayFrames=0;
+  smoothedScore=0;consecutiveAwayFrames=0;sessionStart=Date.now();
+  document.getElementById('alert-log').innerHTML='';
+  addLogEntry('Session reset','ae-focus');updateStats();showToast('↺ Session reset','info');
+}
+
+function startTimer(){
+  clearInterval(timerInterval);
+  timerInterval=setInterval(()=>{
+    const e=Math.floor((Date.now()-sessionStart)/1000);
+    const m=String(Math.floor(e/60)).padStart(2,'0');
+    const s=String(e%60).padStart(2,'0');
+    document.getElementById('session-timer').textContent=m+':'+s;
+    if(consecutiveAwayFrames>5) awaySeconds++;
+    updateStats();
+  },1000);
+}
+
+async function detectLoop(){
+  if(!detecting)return;
+  if(video.readyState>=2){canvas.width=video.videoWidth;canvas.height=video.videoHeight;await runDetection();}
+  animFrame=requestAnimationFrame(detectLoop);
+}
+
+async function runDetection(){
+  let predictions=[];
+  try{predictions=await blazeModel.estimateFaces(video,false);}catch(e){return;}
+  totalFrames++;
+  const showLM=document.getElementById('toggle-landmarks').checked;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  if(predictions.length===0){
+    consecutiveAwayFrames++;awayFrames++;
+    currentFocusScore=Math.max(0,currentFocusScore-4);
+    smoothedScore=lerp(smoothedScore,currentFocusScore,.12);
+    setIndicator('ind-face','Away','ind-bad');setIndicator('ind-gaze','Away','ind-bad');
+    setIndicator('ind-head','—','ind-idle');setIndicator('ind-posture','—','ind-idle');
+    document.getElementById('hud-state').textContent='Away';
+    focusBox.classList.remove('visible');alertFlash.classList.add('alert');
+    if(consecutiveAwayFrames>30) triggerAlert('🚶 You stepped away from screen','ae-distract');
+  }else{
+    consecutiveAwayFrames=0;alertFlash.classList.remove('alert');
+    setIndicator('ind-face','✓ Yes','ind-good');
+    const face=predictions[0];
+    const start=face.topLeft,end=face.bottomRight;
+    const w=end[0]-start[0],h=end[1]-start[1];
+    const cx=start[0]+w/2,cy=start[1]+h/2;
+    const vcw=canvas.width,fx=vcw-end[0];
+    focusBox.classList.add('visible');
+    const vw=video.offsetWidth,vh=video.offsetHeight;
+    const sx=vw/canvas.width,sy=vh/canvas.height;
+    focusBox.style.left=(fx*sx)+'px';focusBox.style.top=(start[1]*sy)+'px';
+    focusBox.style.width=(w*sx)+'px';focusBox.style.height=(h*sy)+'px';
+    if(showLM&&face.landmarks){
+      ctx.fillStyle='rgba(57,255,20,.8)';
+      for(const lm of face.landmarks){ctx.beginPath();ctx.arc(lm[0],lm[1],2.5,0,Math.PI*2);ctx.fill();}
+    }
+    const fw=canvas.width,fh=canvas.height;
+    const normCx=cx/fw,normCy=cy/fh,normSize=(w*h)/(fw*fh);
+    const hOffset=Math.abs(normCx-.5);
+    const gazeOk=hOffset<.25;
+    setIndicator('ind-gaze',gazeOk?'✓ On screen':'⚠ Drifting',gazeOk?'ind-good':'ind-warn');
+    const sizeOk=normSize>.03&&normSize<.45;
+    const headTilt=normCy<.65;
+    setIndicator('ind-head',sizeOk?'✓ OK':(normSize<.03?'⚠ Too far':'⚠ Too close'),sizeOk?'ind-good':'ind-warn');
+    setIndicator('ind-posture',headTilt?'✓ Upright':'⚠ Slouching',headTilt?'ind-good':'ind-warn');
+    let score=80;
+    if(!gazeOk) score-=30;if(!sizeOk) score-=15;if(!headTilt) score-=20;if(hOffset>.38) score-=20;
+    score=Math.max(0,Math.min(100,score));
+    currentFocusScore=lerp(currentFocusScore,score,.15);
+    smoothedScore=lerp(smoothedScore,currentFocusScore,.1);
+    let stateLabel,stateClass;
+    if(smoothedScore>=65){stateLabel='✓ Focused';stateClass='';document.getElementById('hud-state').textContent='Focused';focusBox.classList.remove('warning','danger');focusedFrames++;}
+    else if(smoothedScore>=35){stateLabel='⚡ Distracted';stateClass='distracted';document.getElementById('hud-state').textContent='Distracted';focusBox.classList.add('warning');focusBox.classList.remove('danger');triggerAlert('⚡ You seem distracted!','ae-posture');}
+    else{stateLabel='⚠ Unfocused';stateClass='unfocused';document.getElementById('hud-state').textContent='Unfocused';focusBox.classList.add('danger');focusBox.classList.remove('warning');triggerAlert('⚠ Focus dropped!','ae-distract');}
+    const badge=document.getElementById('focus-state-badge');
+    badge.textContent=stateLabel;badge.className='focus-state-badge '+stateClass;
+    document.getElementById('hud-conf').textContent='Score: '+Math.round(smoothedScore);
+  }
+  updateMeter(Math.round(smoothedScore));
+}
+
+function triggerAlert(msg,cls){
+  const now=Date.now();if(now-lastAlertTime<alertCooldown)return;
+  lastAlertTime=now;alertCount++;addLogEntry(msg,cls);
+  const banner=document.getElementById('alert-banner');
+  banner.textContent=msg;banner.classList.add('show');
+  setTimeout(()=>banner.classList.remove('show'),3500);
+  if(document.getElementById('toggle-sound').checked){
+    try{
+      const ac=new(window.AudioContext||window.webkitAudioContext)();
+      const osc=ac.createOscillator(),gain=ac.createGain();
+      osc.connect(gain);gain.connect(ac.destination);
+      osc.frequency.value=880;gain.gain.setValueAtTime(.3,ac.currentTime);
+      gain.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+.4);
+      osc.start();osc.stop(ac.currentTime+.4);
+    }catch(e){}
+  }
+}
+
+function addLogEntry(msg,cls){
+  const log=document.getElementById('alert-log');
+  log.querySelectorAll('.ae-empty').forEach(e=>e.remove());
+  const time=new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  const el=document.createElement('div');
+  el.className='alert-entry '+(cls||'ae-focus');
+  el.innerHTML=`<span class="ae-dot"></span><span>${msg}</span><span class="ae-time">${time}</span>`;
+  log.prepend(el);
+  while(log.children.length>30) log.removeChild(log.lastChild);
+}
+
+function updateMeter(score){
+  const arc=document.getElementById('meter-arc'),num=document.getElementById('meter-number');
+  const circ=264;
+  if(isNaN(score)){num.textContent='—';arc.style.strokeDashoffset=circ;return;}
+  arc.style.strokeDashoffset=circ-(score/100)*circ;num.textContent=score;
+  const c=score>=65?'#39ff14':(score>=35?'#ffb347':'#ff6b6b');
+  arc.style.stroke=c;arc.style.filter=`drop-shadow(0 0 6px ${c})`;
+  num.style.color=c;
+}
+
+function updateStats(){
+  const fp=totalFrames>0?Math.round((focusedFrames/totalFrames)*100):0;
+  const e=sessionStart?Math.floor((Date.now()-sessionStart)/1000):0;
+  document.getElementById('stat-focus-pct').textContent=totalFrames>0?fp+'%':'—';
+  document.getElementById('stat-alerts').textContent=alertCount;
+  document.getElementById('stat-time').textContent=Math.floor(e/60)+'m';
+  document.getElementById('stat-away').textContent=awaySeconds+'s';
+}
+
+function setStatus(state,label){
+  const dot=document.getElementById('status-dot');
+  dot.className='status-dot'+(state?' '+state:'');
+  document.getElementById('cam-status-label').textContent='— '+label;
+}
+function setIndicator(id,text,cls){
+  const el=document.getElementById(id);el.textContent=text;el.className='posture-indicator '+cls;
+}
+function lerp(a,b,t){return a+(b-a)*t;}
+</script>
+</body>
+</html>
